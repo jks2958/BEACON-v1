@@ -1,24 +1,20 @@
-"""Memory Detection page — the one fully functional detection page.
-
-Loads the real XGBoost model trained by scripts/train_memory.py on the
-repo's actual MemoryCSVs data, applies the exact same fitted
-Preprocessor used at training time (via DashboardController), and
-explains the prediction with SHAP.
-"""
+"""Memory Detection — triage a memory-forensic capture."""
 import pandas as pd
 import streamlit as st
 
 from pipeline.controller import DashboardController, StreamUnavailable, risk_level
+from pipeline.ui import (detections_table, engine_status, inject_theme, kpi_strip,
+                         probability_bars, record_detection, render, verdict_band)
+from pipeline.viz import headline, load_metrics, shap_contribution_chart
 
 st.set_page_config(page_title="BEACON — Memory Detection", page_icon="🧠", layout="wide")
-st.title("🧠 Memory Detection")
+render(inject_theme())
 
 
 @st.cache_resource
 def _load_controller(stream: str) -> DashboardController:
-    # Streamlit reruns this whole script on every widget interaction --
-    # cache_resource keeps the ~16MB model + SHAP explainer loaded once
-    # per stream instead of re-reading it from disk on every rerun.
+    # Streamlit reruns the script on every interaction; cache_resource keeps
+    # the model and SHAP explainer loaded once instead of re-reading them.
     return DashboardController(stream)
 
 
@@ -28,70 +24,99 @@ except StreamUnavailable as exc:
     st.error(str(exc))
     st.stop()
 
-with st.expander("ℹ️ About this demo", expanded=False):
-    st.write(
-        "Uploaded files are parsed and classified **locally in this process** — "
-        "nothing is sent anywhere else. Expected input: one row per sample, with "
-        "the same memory-forensic feature columns (`pslist.*`, `dlllist.*`, "
-        "`handles.*`, `malfind.*`, etc.) as the BCCC Mal-NetMemLog dataset's "
-        "per-sample CSV exports."
-    )
+metrics = load_metrics("memory")
+head = headline(metrics)
 
-uploaded = st.file_uploader("Memory-dump feature CSV", type="csv")
+with st.sidebar:
+    render('<div class="bx-label">Engine status</div>')
+    render(engine_status("Memory model",
+                              f"loaded · {len(controller.feature_cols)} features"))
+    render(engine_status("SHAP explainer", "TreeExplainer · ready"))
+    render('<div class="bx-label" style="margin-top:14px">Dataset</div>')
+    render('<div class="bx-status"><div><div class="mt">BCCC-Mal-NetMem-2025<br>'
+                '9 categories · local inference only</div></div></div>')
 
-sample_hint = st.checkbox("I don't have a file handy — where do I get one?")
-if sample_hint:
-    st.write(
-        "Any single-row CSV from `data/raw/MemoryCSVs/<Category>/*.csv` in this "
-        "repo works as a test upload (that's exactly what the model was "
-        "trained/tested on)."
-    )
+st.markdown("# Analyse memory capture")
+st.caption("Memory-forensic telemetry classified locally into one of nine categories, "
+           "with a SHAP explanation of what drove the verdict.")
 
-if uploaded is not None:
-    try:
-        df = controller.handle_upload(uploaded)
-    except ValueError as exc:
-        st.error(str(exc))
-        st.stop()
+uploaded = st.file_uploader("Memory-dump feature CSV", type="csv",
+                            label_visibility="collapsed")
 
-    if len(df) > 1:
-        st.info(f"File has {len(df)} rows — showing the classification for row 1 only.")
+if uploaded is None:
+    st.info("Upload a memory-dump feature CSV to run a classification. Any file from "
+            "`data/raw/MemoryCSVs/<Category>/` works as a test sample.", icon="⬆️")
+    render('<div class="bx-label" style="margin-top:22px">Detections this session</div>')
+    render(detections_table(st.session_state.get("detections", [])))
+    st.stop()
 
-    with st.spinner("Classifying and computing SHAP explanation..."):
-        result = controller.run_pipeline(df)
+try:
+    df = controller.handle_upload(uploaded)
+except ValueError as exc:
+    st.error(str(exc))
+    st.stop()
 
-    pred_label = result["predictions"][0]
-    proba_row = result["probabilities"].iloc[0]
-    confidence = float(proba_row[pred_label])
-    risk = risk_level(pred_label, confidence)
+with st.spinner("Classifying and computing SHAP explanation…"):
+    result = controller.run_pipeline(df)
 
-    risk_color = {"Low": "🟢", "Medium": "🟡", "High": "🟠", "Critical": "🔴"}[risk]
+verdict = result["verdict"]
+confidence = result["confidence"]
+severity = risk_level(verdict, confidence)
+proba = result["aggregate_probabilities"].sort_values(ascending=False)
+runner_up = proba.index[1] if len(proba) > 1 else "—"
+margin = (proba.iloc[0] - proba.iloc[1]) * 100 if len(proba) > 1 else 0.0
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Predicted category", pred_label)
-    col2.metric("Confidence", f"{confidence:.1%}")
-    col3.metric("Risk level", f"{risk_color} {risk}")
+record_detection(st.session_state, sample=uploaded.name, stream="memory",
+                 verdict=verdict, confidence=confidence, severity=severity,
+                 rows=result["n_rows"])
 
-    st.subheader("Class probabilities")
-    st.bar_chart(proba_row.sort_values(ascending=False))
+render(verdict_band(verdict, severity, confidence,
+                 f"{uploaded.name} · {result['n_rows']} row(s) · memory_classifier.joblib"))
 
-    st.subheader("Top contributing features (SHAP)")
-    st.caption(
-        "Positive SHAP value pushes the prediction toward the predicted class; "
-        "negative pushes away from it."
-    )
-    st.dataframe(result["top_features"], use_container_width=True)
+kpis = [
+    {"label": "Rows analysed", "value": f"{result['n_rows']:,}", "sub": "memory sample"},
+    {"label": "Features used", "value": f"{len(controller.feature_cols)}",
+     "sub": "post-preprocessing"},
+    {"label": "Second choice", "value": runner_up, "sub": f"margin {margin:.1f} pt"},
+]
+if head:
+    kpis += [
+        {"label": "Model accuracy", "value": f"{head['accuracy']:.1%}",
+         "sub": f"per sample · n={head['n']:,}"},
+        {"label": "Macro F1", "value": f"{head['macro_f1']:.3f}", "sub": "9-class"},
+    ]
+render(kpi_strip(kpis))
 
-    export_df = pd.DataFrame(
-        {
-            "predicted_category": [pred_label],
-            "confidence": [confidence],
-            "risk_level": [risk],
-        }
-    )
-    st.download_button(
-        "Download result as CSV",
-        export_df.to_csv(index=False),
-        file_name="beacon_memory_prediction.csv",
-        mime="text/csv",
-    )
+summary_tab, explain_tab, raw_tab = st.tabs(["Summary", "Explanation", "Raw features"])
+
+with summary_tab:
+    left, right = st.columns([1, 1], gap="medium")
+    with left:
+        render('<div class="bx-label">Class probabilities</div>')
+        render(probability_bars(result["aggregate_probabilities"], verdict))
+    with right:
+        render('<div class="bx-label">Top contributing features</div>')
+        st.altair_chart(shap_contribution_chart(result["top_features"], "dark"),
+                        use_container_width=True)
+
+with explain_tab:
+    st.markdown("Blue pushes the verdict toward **{}**; red pushes away. Values are "
+                "SHAP contributions relative to the model's base rate."
+                .format(verdict))
+    st.altair_chart(shap_contribution_chart(result["top_features"], "dark"),
+                    use_container_width=True)
+
+with raw_tab:
+    st.dataframe(result["top_features"], use_container_width=True, hide_index=True)
+
+render('<div class="bx-label" style="margin-top:20px">Detections this session</div>')
+render(detections_table(st.session_state.get("detections", [])))
+
+st.download_button(
+    "Export verdict (CSV)",
+    pd.DataFrame([{"sample": uploaded.name, "stream": "memory",
+                   "predicted_category": verdict, "confidence": confidence,
+                   "severity": severity, "rows_analysed": result["n_rows"]}]
+                 ).to_csv(index=False),
+    file_name="beacon_memory_verdict.csv", mime="text/csv",
+)

@@ -182,9 +182,56 @@ class Preprocessor:
     # a single uploaded DataFrame, using only parameters learned at
     # training time (no fitting happens here).
     # ------------------------------------------------------------------
+    @property
+    def missingness_handled_cols(self) -> set[str]:
+        """Columns Step 4 was fitted to fill (median-imputed or structural
+        sentinel+flag). A NaN in one of these is expected and handled; a
+        NaN anywhere else would reach the model unfilled, so callers
+        validating an upload can tell the two cases apart."""
+        return set(self.missingness_medians) | set(self.structural_missing_cols)
+
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         df = self.apply_log_transform(df)
         df = self.apply_handle_missingness(df)
         df = self.apply_minmax(df)
         df = self.apply_correlation_prune(df)
         return df
+
+
+# ----------------------------------------------------------------------
+# Derived features
+#
+# These run BEFORE a Preprocessor sees the data, because they create the
+# columns the Preprocessor was fitted on. They live here rather than in a
+# training script because inference has to apply the identical step -- a
+# raw capture straight off the wire carries the string form, and the model
+# was trained on the encoded form. Which derivations a model needs is
+# recorded by name in its artifact bundle (see DERIVATIONS), so inference
+# replays exactly what training did instead of hardcoding an assumption.
+# ----------------------------------------------------------------------
+
+HANDSHAKE_COLS = ["delta_start", "handshake_duration"]
+INCOMPLETE_HANDSHAKE = "not a complete handshake"
+
+
+def encode_handshake(df: pd.DataFrame) -> pd.DataFrame:
+    """Turn 'not a complete handshake' into an explicit binary feature,
+    then make the underlying columns genuinely numeric.
+
+    Nulling these out (what ignore_errors=True did originally) throws away
+    a real signal: a flow that never completed a handshake is behaviourally
+    different from one that completed in 0.03s, and ~39% of rows are in
+    that state."""
+    df = df.copy()
+    for col in HANDSHAKE_COLS:
+        if col not in df.columns:
+            continue
+        incomplete = df[col].astype(str).str.strip() == INCOMPLETE_HANDSHAKE
+        df[f"{col}_incomplete"] = incomplete.astype("int8")
+        # -1 sentinel: distinguishable from any real duration (>= 0)
+        df[col] = pd.to_numeric(df[col], errors="coerce").astype("float32")
+        df.loc[incomplete, col] = -1.0
+    return df
+
+
+DERIVATIONS = {"encode_handshake": encode_handshake}

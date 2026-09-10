@@ -34,7 +34,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pipeline.artifacts import ArtifactStore
 from pipeline.classifier import NetworkClassifier
-from pipeline.common import Preprocessor
+from pipeline.common import Preprocessor, encode_handshake
 from pipeline.explain import Explainer
 
 RAW_DIR = os.path.join("data", "raw", "NetCSVs")
@@ -53,10 +53,15 @@ LABEL_FIXES = {"Zbenign": "Benign"}
 # Pure identifiers -- never model features. src_ip/dst_ip in particular
 # would let the model memorise the lab's addressing rather than learn
 # behaviour.
-IDENTIFIER_COLS = ["flow_id", "timestamp", "src_ip", "dst_ip", "protocol"]
-
-HANDSHAKE_COLS = ["delta_start", "handshake_duration"]
-INCOMPLETE_HANDSHAKE = "not a complete handshake"
+#
+# src_port is dropped for the same reason even though it measurably is
+# NOT leaking: an A/B test put it at global gain rank 76/343, and removing
+# it cost 1.3 points flow-level while slightly IMPROVING sample-level
+# accuracy. It goes anyway because an OS-assigned ephemeral port has no
+# behavioural meaning, so keeping a feature that costs nothing and invites
+# a "why is that a feature?" objection is a bad trade.
+# dst_port is KEPT -- 443/80/4444 genuinely encode service behaviour.
+IDENTIFIER_COLS = ["flow_id", "timestamp", "src_ip", "dst_ip", "protocol", "src_port"]
 
 LOG_TRANSFORM_COLS = ["duration", "packets_count", "total_payload_bytes",
                       "bytes_rate", "packets_rate"]
@@ -99,26 +104,6 @@ def load_raw() -> pd.DataFrame:
     if "label" not in combined.columns:
         combined["label"] = np.repeat(labels, lengths)
     return combined
-
-
-def encode_handshake(df: pd.DataFrame) -> pd.DataFrame:
-    """Turn 'not a complete handshake' into an explicit binary feature,
-    then make the underlying columns genuinely numeric.
-
-    Nulling these out (what ignore_errors=True did originally) throws away
-    a real signal: a flow that never completed a handshake is behaviourally
-    different from one that completed in 0.03s, and ~44% of rows are in
-    that state."""
-    df = df.copy()
-    for col in HANDSHAKE_COLS:
-        if col not in df.columns:
-            continue
-        incomplete = df[col].astype(str).str.strip() == INCOMPLETE_HANDSHAKE
-        df[f"{col}_incomplete"] = incomplete.astype("int8")
-        # -1 sentinel: distinguishable from any real duration (>= 0)
-        df[col] = pd.to_numeric(df[col], errors="coerce").astype("float32")
-        df.loc[incomplete, col] = -1.0
-    return df
 
 
 def main():
@@ -272,13 +257,37 @@ def main():
     classifier.train(X_train, y_train, sample_weight=sample_weights, **best_params)
 
     print("\n" + "=" * 70)
-    print("EVALUATION on held-out test set")
+    print("EVALUATION -- FLOW level (one prediction per network flow)")
     print("=" * 70)
     y_pred = classifier.predict(X_test)
     print(classification_report(y_test, y_pred, digits=3))
     macro_f1 = f1_score(y_test, y_pred, average="macro")
     accuracy = float((y_pred == y_test.values).mean())
-    print(f"Test accuracy: {accuracy:.4f}   Test macro F1: {macro_f1:.4f}")
+    print(f"FLOW-level accuracy: {accuracy:.4f}   macro F1: {macro_f1:.4f}   (n={len(y_test)})")
+
+    print("\n" + "=" * 70)
+    print("EVALUATION -- SAMPLE level (one verdict per capture)")
+    print("=" * 70)
+    # A capture produces hundreds of flows that all share one label, and
+    # the deployed system classifies a capture, not a lone flow. Averaging
+    # each capture's per-flow probabilities is therefore both the
+    # operationally correct unit and a much stronger signal -- individual
+    # flow errors cancel out. Note the effective n drops from ~129k flows
+    # to a few hundred captures, so report that n alongside the figure.
+    proba = classifier.predict_proba(X_test)
+    agg = proba.copy()
+    agg["sample_id"] = test_df["sample_id"].values
+    agg["_truth"] = y_test.values
+    truth_by_sample = agg.groupby("sample_id")["_truth"].first()
+    mean_proba = agg.groupby("sample_id")[list(classifier.label_encoder.classes_)].mean()
+    sample_pred = mean_proba.idxmax(axis=1)
+    sample_truth = truth_by_sample.loc[mean_proba.index]
+
+    sample_acc = float((sample_pred.values == sample_truth.values).mean())
+    sample_f1 = f1_score(sample_truth, sample_pred, average="macro")
+    print(classification_report(sample_truth, sample_pred, digits=3))
+    print(f"SAMPLE-level accuracy: {sample_acc:.4f}   macro F1: {sample_f1:.4f}   "
+          f"(n={len(sample_truth)} captures)")
 
     cm = confusion_matrix(y_test, y_pred, labels=classifier.label_encoder.classes_)
     try:
@@ -315,7 +324,11 @@ def main():
     print("=" * 70)
     ArtifactStore.save_model(classifier, os.path.join(MODEL_DIR, "network_classifier.joblib"))
     ArtifactStore.save_artifacts(
-        {"preprocessor": pre, "feature_cols": feature_cols, "categories": CATEGORIES},
+        {"preprocessor": pre, "feature_cols": feature_cols, "categories": CATEGORIES,
+         # Records the pre-Preprocessor step this model was trained on, so
+         # inference replays it rather than rejecting a raw capture whose
+         # handshake columns are still in their string form.
+         "derivations": ["encode_handshake"]},
         os.path.join(MODEL_DIR, "network_preprocessing_artifacts.joblib"))
 
     metrics = {
@@ -327,10 +340,20 @@ def main():
         "optuna_trials": N_OPTUNA_TRIALS,
         "best_inner_val_macro_f1": float(study.best_value),
         "best_params": study.best_params,
-        "test_accuracy": accuracy,
-        "test_macro_f1": float(macro_f1),
-        "test_classification_report": classification_report(y_test, y_pred, digits=3,
-                                                            output_dict=True),
+        "flow_level": {
+            "test_accuracy": accuracy,
+            "test_macro_f1": float(macro_f1),
+            "n_test_flows": int(len(y_test)),
+            "classification_report": classification_report(y_test, y_pred, digits=3,
+                                                           output_dict=True),
+        },
+        "sample_level": {
+            "test_accuracy": sample_acc,
+            "test_macro_f1": float(sample_f1),
+            "n_test_samples": int(len(sample_truth)),
+            "classification_report": classification_report(sample_truth, sample_pred,
+                                                           digits=3, output_dict=True),
+        },
         "incomplete_handshake_fraction": float(n_incomplete / (len(train_df) + len(test_df))),
     }
     with open(os.path.join(MODEL_DIR, "network_metrics.json"), "w") as fh:

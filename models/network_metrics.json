@@ -1,0 +1,176 @@
+{
+  "stream": "network",
+  "categories_present": [
+    "Backdoor",
+    "Benign",
+    "Exploit",
+    "HackTool",
+    "Hoax",
+    "Rootkit",
+    "Trojan",
+    "Virus",
+    "Worm"
+  ],
+  "train_rows": 516136,
+  "test_rows": 129118,
+  "n_features": 342,
+  "corr_threshold": 1.0,
+  "optuna_trials": 10,
+  "best_inner_val_macro_f1": 0.6611938951954162,
+  "best_params": {
+    "n_estimators": 200,
+    "max_depth": 10,
+    "learning_rate": 0.04153498507513123,
+    "subsample": 0.7148598656309413,
+    "colsample_bytree": 0.6055887974495078
+  },
+  "flow_level": {
+    "test_accuracy": 0.6824842392230362,
+    "test_macro_f1": 0.6454189531890222,
+    "n_test_flows": 129118,
+    "classification_report": {
+      "Backdoor": {
+        "precision": 0.4572460030943786,
+        "recall": 0.6336477987421384,
+        "f1-score": 0.5311844706728177,
+        "support": 6996.0
+      },
+      "Benign": {
+        "precision": 0.5917117630304757,
+        "recall": 0.6301182893539582,
+        "f1-score": 0.6103113983548766,
+        "support": 13188.0
+      },
+      "Exploit": {
+        "precision": 0.49104642281252653,
+        "recall": 0.6066897347174164,
+        "f1-score": 0.5427767354596623,
+        "support": 9537.0
+      },
+      "HackTool": {
+        "precision": 0.6475800954328562,
+        "recall": 0.6167329384078553,
+        "f1-score": 0.6317802069911468,
+        "support": 12323.0
+      },
+      "Hoax": {
+        "precision": 0.745350622760621,
+        "recall": 0.8003847563209967,
+        "f1-score": 0.7718879759696087,
+        "support": 10916.0
+      },
+      "Rootkit": {
+        "precision": 0.736591616328025,
+        "recall": 0.6021247942540775,
+        "f1-score": 0.6626049728305615,
+        "support": 13366.0
+      },
+      "Trojan": {
+        "precision": 0.5900204260285964,
+        "recall": 0.612309788780377,
+        "f1-score": 0.6009585020618939,
+        "support": 13209.0
+      },
+      "Virus": {
+        "precision": 0.9974133654595706,
+        "recall": 0.7844443205885632,
+        "f1-score": 0.8782017283873584,
+        "support": 35884.0
+      },
+      "Worm": {
+        "precision": 0.5190371484781854,
+        "recall": 0.6547923206073436,
+        "f1-score": 0.579064587973274,
+        "support": 13699.0
+      },
+      "accuracy": 0.6824842392230362,
+      "macro avg": {
+        "precision": 0.6417774959361372,
+        "recall": 0.660138304641414,
+        "f1-score": 0.6454189531890222,
+        "support": 129118.0
+      },
+      "weighted avg": {
+        "precision": 0.7151768837136363,
+        "recall": 0.6824842392230362,
+        "f1-score": 0.6923372974607164,
+        "support": 129118.0
+      }
+    }
+  },
+  "sample_level": {
+    "test_accuracy": 0.9910514541387024,
+    "test_macro_f1": 0.9910400472735523,
+    "n_test_samples": 447,
+    "classification_report": {
+      "Backdoor": {
+        "precision": 1.0,
+        "recall": 0.9795918367346939,
+        "f1-score": 0.9896907216494846,
+        "support": 49.0
+      },
+      "Benign": {
+        "precision": 1.0,
+        "recall": 0.9791666666666666,
+        "f1-score": 0.9894736842105263,
+        "support": 48.0
+      },
+      "Exploit": {
+        "precision": 0.98,
+        "recall": 0.98,
+        "f1-score": 0.98,
+        "support": 50.0
+      },
+      "HackTool": {
+        "precision": 0.9803921568627451,
+        "recall": 1.0,
+        "f1-score": 0.9900990099009901,
+        "support": 50.0
+      },
+      "Hoax": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 50.0
+      },
+      "Rootkit": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 50.0
+      },
+      "Trojan": {
+        "precision": 0.9803921568627451,
+        "recall": 1.0,
+        "f1-score": 0.9900990099009901,
+        "support": 50.0
+      },
+      "Virus": {
+        "precision": 1.0,
+        "recall": 0.98,
+        "f1-score": 0.98989898989899,
+        "support": 50.0
+      },
+      "Worm": {
+        "precision": 0.9803921568627451,
+        "recall": 1.0,
+        "f1-score": 0.9900990099009901,
+        "support": 50.0
+      },
+      "accuracy": 0.9910514541387024,
+      "macro avg": {
+        "precision": 0.9912418300653596,
+        "recall": 0.9909731670445956,
+        "f1-score": 0.9910400472735523,
+        "support": 447.0
+      },
+      "weighted avg": {
+        "precision": 0.9911830504013684,
+        "recall": 0.9910514541387024,
+        "f1-score": 0.9910500742349619,
+        "support": 447.0
+      }
+    }
+  },
+  "incomplete_handshake_fraction": 0.3861735068670632
+}
