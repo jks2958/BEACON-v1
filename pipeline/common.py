@@ -226,10 +226,15 @@ def encode_handshake(df: pd.DataFrame) -> pd.DataFrame:
     for col in HANDSHAKE_COLS:
         if col not in df.columns:
             continue
-        incomplete = df[col].astype(str).str.strip() == INCOMPLETE_HANDSHAKE
+        numeric = pd.to_numeric(df[col], errors="coerce").astype("float32")
+        # The -1 arm keeps this idempotent. After one pass the string is
+        # already the sentinel, so matching only the string would clear the
+        # indicator on a second pass while leaving the -1 in place -- two
+        # features stating opposite things about the same flow.
+        incomplete = (df[col].astype(str).str.strip() == INCOMPLETE_HANDSHAKE) | (numeric == -1.0)
         df[f"{col}_incomplete"] = incomplete.astype("int8")
         # -1 sentinel: distinguishable from any real duration (>= 0)
-        df[col] = pd.to_numeric(df[col], errors="coerce").astype("float32")
+        df[col] = numeric
         df.loc[incomplete, col] = -1.0
     return df
 

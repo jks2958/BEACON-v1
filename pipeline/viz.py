@@ -68,7 +68,13 @@ def load_metrics(stream: str) -> dict | None:
     import json
     import os
 
-    path = os.path.join("models", f"{stream}_metrics.json")
+    # Anchored to this file, not the process CWD. A relative "models/..."
+    # silently returned None whenever the app was launched from anywhere
+    # but the repo root, which drops every accuracy figure from the UI
+    # rather than raising -- the failure mode is a missing number, not an
+    # error message.
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(root, "models", f"{stream}_metrics.json")
     if not os.path.exists(path):
         return None
     with open(path) as fh:
