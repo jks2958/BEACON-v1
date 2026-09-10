@@ -1,0 +1,87 @@
+{
+  "stream": "memory",
+  "train_rows_before_resampling": 7341,
+  "train_rows_after_resampling": 8035,
+  "test_rows": 1836,
+  "n_features": 77,
+  "optuna_trials": 20,
+  "best_inner_val_macro_f1": 0.5774789743287917,
+  "best_params": {
+    "n_estimators": 300,
+    "max_depth": 9,
+    "learning_rate": 0.06297180439893246,
+    "subsample": 0.7287872642311504,
+    "colsample_bytree": 0.8840903823105699
+  },
+  "test_macro_f1": 0.4836733192509063,
+  "test_classification_report": {
+    "Backdoor": {
+      "precision": 0.807843137254902,
+      "recall": 0.8340080971659919,
+      "f1-score": 0.8207171314741036,
+      "support": 247.0
+    },
+    "Benign": {
+      "precision": 0.3617021276595745,
+      "recall": 0.37777777777777777,
+      "f1-score": 0.3695652173913043,
+      "support": 225.0
+    },
+    "Exploit": {
+      "precision": 0.3333333333333333,
+      "recall": 0.15,
+      "f1-score": 0.20689655172413793,
+      "support": 20.0
+    },
+    "HackTool": {
+      "precision": 0.6505376344086021,
+      "recall": 0.6237113402061856,
+      "f1-score": 0.6368421052631579,
+      "support": 194.0
+    },
+    "Hoax": {
+      "precision": 0.6367521367521367,
+      "recall": 0.6772727272727272,
+      "f1-score": 0.6563876651982379,
+      "support": 220.0
+    },
+    "Rootkit": {
+      "precision": 0.40555555555555556,
+      "recall": 0.33640552995391704,
+      "f1-score": 0.3677581863979849,
+      "support": 217.0
+    },
+    "Trojan": {
+      "precision": 0.4297872340425532,
+      "recall": 0.4225941422594142,
+      "f1-score": 0.42616033755274263,
+      "support": 239.0
+    },
+    "Virus": {
+      "precision": 0.4435483870967742,
+      "recall": 0.45454545454545453,
+      "f1-score": 0.4489795918367347,
+      "support": 242.0
+    },
+    "Worm": {
+      "precision": 0.4015748031496063,
+      "recall": 0.4396551724137931,
+      "f1-score": 0.41975308641975306,
+      "support": 232.0
+    },
+    "accuracy": 0.5174291938997821,
+    "macro avg": {
+      "precision": 0.4967371499170043,
+      "recall": 0.47955224906614013,
+      "f1-score": 0.4836733192509063,
+      "support": 1836.0
+    },
+    "weighted avg": {
+      "precision": 0.5147633115210373,
+      "recall": 0.5174291938997821,
+      "f1-score": 0.5150607383353134,
+      "support": 1836.0
+    }
+  },
+  "exploit_synthetic_fraction_in_training": 0.896640826873385
+}
