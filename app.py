@@ -89,4 +89,4 @@ for col, (title, body) in zip((c1, c2, c3, c4), [
 render("<hr>")
 st.page_link("pages/1_Network_Detection.py", label="Analyse network capture", icon="🌐")
 st.page_link("pages/2_Memory_Detection.py", label="Analyse memory capture", icon="🧠")
-st.page_link("pages/3_About_Methodology.py", label="Model card & methodology", icon="◈")
+st.page_link("pages/3_About_Methodology.py", label="Model card & methodology", icon="📖")
