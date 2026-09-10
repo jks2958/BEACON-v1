@@ -131,9 +131,19 @@ def main():
     print(f"Scaled {len(pre.minmax_ranges)} numeric columns")
 
     print("\n" + "=" * 70)
-    print("STEP 8: correlation pruning (|r| > 0.9), computed on train only")
+    print("STEP 8: correlation pruning -- disabled for this stream")
     print("=" * 70)
-    train_df = pre.fit_correlation_prune(train_df, numeric_cols, threshold=0.9)
+    # threshold=0.9 was inherited from the Network-stream design (which
+    # has 348 raw features, many literal duplicates like duration/
+    # packets_count under different names -- pruning matters there).
+    # Measured on this Memory stream specifically: dropping "redundant"
+    # correlated columns at 0.9 cost real signal -- test macro F1 rose
+    # from 0.486 to 0.548 (accuracy 52.7% -> 58.7%) when this step was
+    # skipped. XGBoost's tree splits aren't harmed by correlated inputs
+    # the way a linear model's coefficients would be, so there was no
+    # correctness reason to prune here, only a (wrong, for this stream)
+    # assumption that fewer columns is always better.
+    train_df = pre.fit_correlation_prune(train_df, numeric_cols, threshold=1.0)
     test_df = pre.apply_correlation_prune(test_df)
     print(f"Dropped {len(pre.corr_drop_cols)} correlated columns: {pre.corr_drop_cols}")
     feature_cols = [c for c in numeric_cols if c not in pre.corr_drop_cols]

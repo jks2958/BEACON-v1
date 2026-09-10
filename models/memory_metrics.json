@@ -3,83 +3,83 @@
   "train_rows_before_resampling": 7341,
   "train_rows_after_resampling": 8035,
   "test_rows": 1836,
-  "n_features": 77,
+  "n_features": 94,
   "optuna_trials": 20,
-  "best_inner_val_macro_f1": 0.57680782965621,
+  "best_inner_val_macro_f1": 0.6261041153706384,
   "best_params": {
     "n_estimators": 450,
-    "max_depth": 8,
-    "learning_rate": 0.04790634143037475,
-    "subsample": 0.6283735915507351,
-    "colsample_bytree": 0.888583005255559
+    "max_depth": 7,
+    "learning_rate": 0.05549542126546421,
+    "subsample": 0.8251401651626141,
+    "colsample_bytree": 0.8092060458816955
   },
-  "test_macro_f1": 0.4856526450492975,
+  "test_macro_f1": 0.5583198047266195,
   "test_classification_report": {
     "Backdoor": {
-      "precision": 0.8070866141732284,
-      "recall": 0.8299595141700404,
-      "f1-score": 0.8183632734530938,
+      "precision": 0.828125,
+      "recall": 0.8582995951417004,
+      "f1-score": 0.8429423459244533,
       "support": 247.0
     },
     "Benign": {
-      "precision": 0.39565217391304347,
-      "recall": 0.40444444444444444,
-      "f1-score": 0.4,
+      "precision": 0.4738675958188153,
+      "recall": 0.6044444444444445,
+      "f1-score": 0.53125,
       "support": 225.0
     },
     "Exploit": {
-      "precision": 0.25,
-      "recall": 0.1,
-      "f1-score": 0.14285714285714285,
+      "precision": 0.5714285714285714,
+      "recall": 0.2,
+      "f1-score": 0.2962962962962963,
       "support": 20.0
     },
     "HackTool": {
-      "precision": 0.6593406593406593,
-      "recall": 0.6185567010309279,
-      "f1-score": 0.6382978723404256,
+      "precision": 0.6825396825396826,
+      "recall": 0.6649484536082474,
+      "f1-score": 0.6736292428198434,
       "support": 194.0
     },
     "Hoax": {
-      "precision": 0.6150627615062761,
-      "recall": 0.6681818181818182,
-      "f1-score": 0.6405228758169934,
+      "precision": 0.6991869918699187,
+      "recall": 0.7818181818181819,
+      "f1-score": 0.7381974248927039,
       "support": 220.0
     },
     "Rootkit": {
-      "precision": 0.4010416666666667,
-      "recall": 0.3548387096774194,
-      "f1-score": 0.3765281173594132,
+      "precision": 0.5251396648044693,
+      "recall": 0.43317972350230416,
+      "f1-score": 0.47474747474747475,
       "support": 217.0
     },
     "Trojan": {
-      "precision": 0.451063829787234,
-      "recall": 0.4435146443514644,
-      "f1-score": 0.4472573839662447,
+      "precision": 0.4931506849315068,
+      "recall": 0.45188284518828453,
+      "f1-score": 0.47161572052401746,
       "support": 239.0
     },
     "Virus": {
-      "precision": 0.4634146341463415,
-      "recall": 0.47107438016528924,
-      "f1-score": 0.4672131147540984,
+      "precision": 0.5213270142180095,
+      "recall": 0.45454545454545453,
+      "f1-score": 0.4856512141280353,
       "support": 242.0
     },
     "Worm": {
-      "precision": 0.424,
-      "recall": 0.45689655172413796,
-      "f1-score": 0.43983402489626555,
+      "precision": 0.5,
+      "recall": 0.521551724137931,
+      "f1-score": 0.510548523206751,
       "support": 232.0
     },
-    "accuracy": 0.5272331154684096,
+    "accuracy": 0.5915032679738562,
     "macro avg": {
-      "precision": 0.49629581550371665,
-      "recall": 0.4830518626383935,
-      "f1-score": 0.4856526450492975,
+      "precision": 0.5883072450678859,
+      "recall": 0.5522967135985054,
+      "f1-score": 0.5583198047266195,
       "support": 1836.0
     },
     "weighted avg": {
-      "precision": 0.5239339143376477,
-      "recall": 0.5272331154684096,
-      "f1-score": 0.5247526552806039,
+      "precision": 0.5897652235914181,
+      "recall": 0.5915032679738562,
+      "f1-score": 0.5873979588132371,
       "support": 1836.0
     }
   },
