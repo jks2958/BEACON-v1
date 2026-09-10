@@ -339,7 +339,13 @@ def main():
         "corr_threshold": CORR_THRESHOLD,
         "optuna_trials": N_OPTUNA_TRIALS,
         "best_inner_val_macro_f1": float(study.best_value),
-        "best_params": study.best_params,
+        # `best_params` is what the final model was ACTUALLY fitted with.
+        # Optuna's own study.best_params reports the SUGGESTED n_estimators,
+        # which early stopping then overrode -- recording that as the final
+        # value misreports the model (the shipped memory run recorded 450
+        # against a booster carrying 400 rounds).
+        "best_params": best_params,
+        "best_params_suggested": study.best_params,
         "flow_level": {
             "test_accuracy": accuracy,
             "test_macro_f1": float(macro_f1),

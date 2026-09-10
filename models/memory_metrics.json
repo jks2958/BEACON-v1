@@ -7,7 +7,7 @@
   "optuna_trials": 20,
   "best_inner_val_macro_f1": 0.6261041153706384,
   "best_params": {
-    "n_estimators": 450,
+    "n_estimators": 400,
     "max_depth": 7,
     "learning_rate": 0.05549542126546421,
     "subsample": 0.8251401651626141,
@@ -83,5 +83,13 @@
       "support": 1836.0
     }
   },
-  "exploit_synthetic_fraction_in_training": 0.896640826873385
+  "exploit_synthetic_fraction_in_training": 0.896640826873385,
+  "best_params_suggested": {
+    "n_estimators": 450,
+    "max_depth": 7,
+    "learning_rate": 0.05549542126546421,
+    "subsample": 0.8251401651626141,
+    "colsample_bytree": 0.8092060458816955
+  },
+  "best_params_note": "n_estimators corrected to the booster's actual round count; the training script had recorded Optuna's suggested value, which early stopping overrode before the final fit."
 }

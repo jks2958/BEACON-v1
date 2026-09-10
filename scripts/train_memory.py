@@ -308,7 +308,13 @@ def main():
         "n_features": len(feature_cols),
         "optuna_trials": N_OPTUNA_TRIALS,
         "best_inner_val_macro_f1": float(study.best_value),
-        "best_params": study.best_params,
+        # `best_params` is what the final model was ACTUALLY fitted with.
+        # Optuna's own study.best_params reports the SUGGESTED n_estimators,
+        # which early stopping then overrode -- recording that as the final
+        # value misreports the model (the shipped memory run recorded 450
+        # against a booster carrying 400 rounds).
+        "best_params": best_params,
+        "best_params_suggested": study.best_params,
         "test_macro_f1": float(macro_f1),
         "test_classification_report": classification_report(y_test, y_pred, digits=3, output_dict=True),
         "exploit_synthetic_fraction_in_training": float(is_synth[y_res == EXPLOIT_LABEL].mean()),
