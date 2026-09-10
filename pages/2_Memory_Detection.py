@@ -13,8 +13,17 @@ from pipeline.controller import DashboardController, StreamUnavailable, risk_lev
 st.set_page_config(page_title="BEACON — Memory Detection", page_icon="🧠", layout="wide")
 st.title("🧠 Memory Detection")
 
+
+@st.cache_resource
+def _load_controller(stream: str) -> DashboardController:
+    # Streamlit reruns this whole script on every widget interaction --
+    # cache_resource keeps the ~16MB model + SHAP explainer loaded once
+    # per stream instead of re-reading it from disk on every rerun.
+    return DashboardController(stream)
+
+
 try:
-    controller = DashboardController("memory")
+    controller = _load_controller("memory")
 except StreamUnavailable as exc:
     st.error(str(exc))
     st.stop()
@@ -44,6 +53,9 @@ if uploaded is not None:
     except ValueError as exc:
         st.error(str(exc))
         st.stop()
+
+    if len(df) > 1:
+        st.info(f"File has {len(df)} rows — showing the classification for row 1 only.")
 
     with st.spinner("Classifying and computing SHAP explanation..."):
         result = controller.run_pipeline(df)

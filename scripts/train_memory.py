@@ -46,7 +46,6 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 CATEGORIES = ["Backdoor", "Benign", "Exploit", "HackTool", "Hoax",
               "Rootkit", "Trojan", "Virus", "Worm"]
 
-LABEL_FIXES = {"Zbenign": "Benign"}
 NON_FEATURE_COLS = ["label", "sample_id", "is_synthetic"]
 EXPLOIT_LABEL = "Exploit"
 N_OPTUNA_TRIALS = int(os.environ.get("BEACON_OPTUNA_TRIALS", "20"))
@@ -89,7 +88,11 @@ def main():
     df = pre.drop_empty_columns(df)
     print(f"After dropping fully-empty columns {sorted(before_cols - set(df.columns))}: {df.shape}")
 
-    df = pre.fix_labels(df, LABEL_FIXES)
+    # No label normalization step here: unlike the Network stream (which
+    # reads a "label" column straight out of each CSV, and hit a real
+    # "Zbenign" vs "Benign" inconsistency there), Memory's label always
+    # comes from the fixed CATEGORIES folder name above, so there's no
+    # label-fixing case to handle on this stream.
     print("Label distribution:")
     print(df["label"].value_counts())
 
@@ -204,6 +207,13 @@ def main():
             sample_weight_eval_set=[w_val],
             verbose=False,
         )
+        # Early stopping means this trial's model may have stopped well
+        # short of the suggested n_estimators -- record the iteration
+        # that actually produced its score, so the final fit (below,
+        # which has no eval_set to early-stop against) reuses the tree
+        # count that earned this trial its macro F1, not the untruncated
+        # suggestion.
+        trial.set_user_attr("best_iteration", model.best_iteration)
         preds = model.predict(X_val)
         return f1_score(y_val_enc, preds, average="macro")
 
@@ -215,6 +225,11 @@ def main():
 
     classifier = MemoryClassifier()
     best_params = study.best_params.copy()
+    best_iteration = study.best_trial.user_attrs.get("best_iteration")
+    if best_iteration is not None:
+        best_params["n_estimators"] = best_iteration + 1
+        print(f"Using best_iteration+1={best_params['n_estimators']} trees for the final fit "
+              f"(early stopping cut the winning trial short of its suggested n_estimators)")
     classifier.train(X_res, y_res, sample_weight=sample_weights, **best_params)
 
     print("\n" + "=" * 70)

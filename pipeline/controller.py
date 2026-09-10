@@ -50,6 +50,18 @@ class DashboardController:
                 f"Uploaded file is missing {len(missing)} required column(s) for the "
                 f"{self.stream} model, e.g.: {missing[:8]}"
             )
+
+        # Column presence alone isn't enough: a NaN or non-numeric value
+        # in a required feature reaches the model silently otherwise,
+        # since none of these columns were flagged as expecting missing
+        # values at training time.
+        coerced = df[self.feature_cols].apply(pd.to_numeric, errors="coerce")
+        bad_cols = [c for c in self.feature_cols if coerced[c].isnull().any()]
+        if bad_cols:
+            raise ValueError(
+                f"Uploaded file has missing or non-numeric value(s) in {len(bad_cols)} "
+                f"required column(s) for the {self.stream} model, e.g.: {bad_cols[:8]}"
+            )
         return df
 
     def run_pipeline(self, df: pd.DataFrame) -> dict:

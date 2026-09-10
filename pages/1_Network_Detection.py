@@ -13,8 +13,14 @@ from pipeline.controller import DashboardController, StreamUnavailable
 st.set_page_config(page_title="BEACON — Network Detection", page_icon="🌐", layout="wide")
 st.title("🌐 Network Detection")
 
+
+@st.cache_resource
+def _load_controller(stream: str) -> DashboardController:
+    return DashboardController(stream)
+
+
 try:
-    controller = DashboardController("network")
+    controller = _load_controller("network")
 except StreamUnavailable:
     st.warning(
         "**No trained Network model is available yet.** This repository does not "
@@ -36,6 +42,9 @@ if uploaded is not None:
     except ValueError as exc:
         st.error(str(exc))
         st.stop()
+
+    if len(df) > 1:
+        st.info(f"File has {len(df)} rows — showing the classification for row 1 only.")
 
     result = controller.run_pipeline(df)
     st.success(f"Predicted category: **{result['predictions'][0]}**")

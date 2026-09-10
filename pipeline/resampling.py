@@ -25,7 +25,19 @@ class Resampler(ABC):
 
     @abstractmethod
     def resample(self, X: pd.DataFrame, y: pd.Series) -> tuple[pd.DataFrame, pd.Series]:
-        """Return a class-balanced (X, y) pair."""
+        """Return a class-balanced (X, y) pair.
+
+        Note: ClusterBasedResampler intentionally does NOT implement this
+        exact signature -- it targets one named minority class rather
+        than rebalancing every class, so it takes an extra required
+        `minority_label` and returns a 3-tuple (X, y, is_synthetic).
+        The two resamplers are called directly by name in the training
+        scripts, not swapped polymorphically through this base type, so
+        that divergence is deliberate rather than a contract violation
+        to fix -- but it does mean `isinstance(r, Resampler)` code that
+        tries to call `.resample(X, y)` generically will break on
+        ClusterBasedResampler.
+        """
 
 
 class SmoteResampler(Resampler):
@@ -110,19 +122,28 @@ class ClusterBasedResampler(Resampler):
 
         if n_needed > 0 and len(X_minority) >= 2:
             k = self.best_k_by_silhouette(X_min_values)
-            cluster_labels = KMeans(n_clusters=k, random_state=self.random_state, n_init=10).fit_predict(
-                X_min_values
-            )
-
             synthetic_chunks = []
-            for c in range(k):
-                cluster_mask = cluster_labels == c
-                cluster_data = X_min_values[cluster_mask]
-                proportion = cluster_mask.sum() / len(X_min_values)
-                n_for_cluster = int(round(n_needed * proportion))
-                if n_for_cluster == 0 or len(cluster_data) == 0:
-                    continue
-                synthetic_chunks.append(self._smote_within_cluster(cluster_data, n_for_cluster))
+
+            if k is None:
+                # The minority class is too small for k_range's smallest
+                # candidate (e.g. fewer than 3 real rows) -- there's no
+                # meaningful cluster structure to find, so interpolate
+                # across the whole minority class as one group instead
+                # of crashing KMeans(n_clusters=None).
+                synthetic_chunks.append(self._smote_within_cluster(X_min_values, n_needed))
+            else:
+                cluster_labels = KMeans(
+                    n_clusters=k, random_state=self.random_state, n_init=10
+                ).fit_predict(X_min_values)
+
+                for c in range(k):
+                    cluster_mask = cluster_labels == c
+                    cluster_data = X_min_values[cluster_mask]
+                    proportion = cluster_mask.sum() / len(X_min_values)
+                    n_for_cluster = int(round(n_needed * proportion))
+                    if n_for_cluster == 0 or len(cluster_data) == 0:
+                        continue
+                    synthetic_chunks.append(self._smote_within_cluster(cluster_data, n_for_cluster))
 
             if synthetic_chunks:
                 synthetic_values = np.concatenate(synthetic_chunks, axis=0)
