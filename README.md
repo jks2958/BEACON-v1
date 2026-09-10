@@ -15,7 +15,7 @@ literature review, and requirements are in `P1 Report.pdf`.
 | **Network-stream model** | ✅ **Trained on the real dataset** — 99.1% per capture, 68.2% per flow |
 | SHAP explainability | ✅ Working, wired into both streams |
 | Streamlit dashboard | ✅ Functional for both streams |
-| Test suite (`tests/`) | ✅ 82 tests, no raw dataset required |
+| Test suite (`tests/`) | ✅ 88 tests, no raw dataset required |
 | Original `.ipynb` notebooks | Kept as-is except two bug fixes (see below); they're exploratory, not the pipeline this app runs on |
 
 Both streams' numbers are real, not illustrative — measured on held-out,
@@ -121,6 +121,61 @@ Two Network-specific details, both absent from the Memory stream:
   too** — the artifact bundle records it under `derivations`, so a raw
   capture is encoded before validation rather than rejected.
 
+## Dual-stream fusion — a negative result
+
+`scripts/train_fusion.py` tests whether combining both streams into one
+verdict beats either alone. **It does not.** Measured on the 214 samples
+that carry both a network capture and a memory dump, with both models
+trained excluding all 214 (`models/fusion_metrics.json`):
+
+| Decision rule | Accuracy | Macro F1 |
+|---|---|---|
+| Network only | **99.07%** | 0.987 |
+| Memory only | 34.58% | 0.205 |
+| Fusion (mean) | 78.50% | 0.730 |
+| Fusion (confidence-weighted) | 78.97% | 0.660 |
+
+Fusion costs 20 points against the network stream alone. The memory
+stream is the only correct voice in 1 case out of 214 (network alone 139,
+both 73, neither 1), so averaging it in mostly corrupts verdicts the
+network stream already had right. The streams therefore stay independent
+in the dashboard; memory is a fallback for samples with no network
+capture, not a vote alongside one.
+
+Caveats, all recorded in the metrics file: these 214 cover 8 of the 9
+categories (no sample has both streams for Exploit) and are skewed
+(HackTool 69, Backdoor 3), and hyperparameters were reused from the
+shipped runs rather than re-searched.
+
+### The finding underneath it
+
+The memory arm scores 34.6% here against its own 59.2% headline. That gap
+is not a bug — given the shipped hold-out, this same pipeline reproduces
+58.82% vs the shipped 59.15%. It is a **near-neighbour effect**, and the
+ablation isolates it. Holding the evaluation set fixed at the 41 dual
+samples the shipped model also never saw, and varying only whether the
+*other* 173 dual samples are in training:
+
+| Training set | Accuracy on the same 41 |
+|---|---|
+| 173 neighbours in | **68.29%** |
+| 173 neighbours out | **31.71%** |
+
+**36.6 points from 173 samples out of ~5,700.** The dual-stream samples
+are a tightly-related cluster that a split grouped by `sample_id` does not
+separate. No exact-duplicate feature vector crosses the shipped split, so
+the 59.2% is not inflated *that* way — what is demonstrated is a strong
+near-neighbour effect for one identifiable cluster, not that the dataset
+has this structure throughout. Testing that properly would mean clustering
+the memory features and splitting by cluster rather than by sample.
+
+```bash
+.venv/bin/python scripts/train_fusion.py      # needs both raw datasets
+```
+
+It writes only `models/fusion_metrics.json`; the shipped models are left
+untouched.
+
 ## Tests
 
 ```bash
@@ -128,7 +183,7 @@ Two Network-specific details, both absent from the Memory stream:
 .venv/bin/python -m pytest
 ```
 
-82 tests, ~13 seconds, and they need no raw data: the trained artifacts are
+88 tests, ~13 seconds, and they need no raw data: the trained artifacts are
 committed, so model-backed tests synthesise inputs from each model's own
 recorded feature list. Tests that need an artifact skip cleanly if it is
 absent rather than failing.
@@ -170,7 +225,8 @@ pipeline/           Shared, reusable pipeline code (training + inference)
 scripts/
   train_memory.py     End-to-end training run (Memory stream)
   train_network.py    End-to-end training run (Network stream)
-tests/                pytest suite (82 tests, no raw data required)
+  train_fusion.py     Dual-stream fusion experiment (negative result)
+tests/                pytest suite (88 tests, no raw data required)
 app.py                Streamlit landing page
 pages/                Network Detection / Memory Detection / About pages
 models/               Trained models + preprocessing artifacts + metrics (both streams)
