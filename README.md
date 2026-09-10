@@ -11,18 +11,34 @@ literature review, and requirements are in `P1 Report.pdf`.
 |---|---|
 | Preprocessing pipeline (`pipeline/common.py`) | ✅ Built, reused by training and inference |
 | Resampling (`pipeline/resampling.py`) | ✅ Built (class weights + cluster-based SMOTE) |
-| **Memory-stream model** | ✅ **Trained on the real dataset**, macro F1 ≈ 0.48 — see `models/memory_metrics.json` |
+| **Memory-stream model** | ✅ **Trained on the real dataset**, macro F1 ≈ 0.56 — see `models/memory_metrics.json` |
 | SHAP explainability | ✅ Working, wired into the dashboard |
 | Streamlit dashboard | ✅ Functional for the Memory stream |
 | **Network-stream model** | ❌ **Not trained** — this repo has no raw `NetCSVs` data, only `MemoryCSVs.zip` |
 | Original `.ipynb` notebooks | Kept as-is except two bug fixes (see below); they're exploratory, not the pipeline this app runs on |
 
-The Memory-stream numbers are real, not illustrative: macro F1 ≈ 0.48,
-accuracy ≈ 52% on a held-out, sample-grouped test split, trained on the
+The Memory-stream numbers are real, not illustrative: macro F1 ≈ 0.56,
+accuracy ≈ 59% on a held-out, sample-grouped test split, trained on the
 full 9,177-row real dataset in `MemoryCSVs.zip`. Exploit's training data is
 ~90% synthetic (cluster-based SMOTE, only 80 real samples exist) — treat its
 per-class numbers as lower-confidence than the other 8 categories, per the
 report's own caveat.
+
+**Why not higher, and why 90%+ isn't a realistic target for this task:**
+per-class results (`models/memory_metrics.json`) and the confusion matrix
+(`models/memory_confusion_matrix.png`) show Backdoor, Hoax, and HackTool
+separating cleanly (65-86% recall), while Benign, Rootkit, Trojan, Virus,
+and Worm are heavily confused with *each other* — a real behavioral-overlap
+ceiling in memory-forensic features (process/handle/DLL counts) rather
+than a tuning gap: several of these families simply don't leave
+distinguishable memory footprints from each other or from benign processes.
+Widening the hyperparameter search (60 trials, added regularization terms)
+did not beat the narrower 20-trial search — confirming the ceiling is in
+the feature set's discriminative power for these specific classes, not in
+search coverage. The one change that produced a real, measured gain was
+disabling correlation-based feature pruning (Step 8), which had been
+discarding genuinely useful signal for this stream specifically (52.7% ->
+58.7% accuracy) -- see the comment in `scripts/train_memory.py`.
 
 ## Setup
 
