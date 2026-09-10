@@ -27,10 +27,19 @@ class MalwareClassifier(ABC):
     def train(self, X: pd.DataFrame, y, sample_weight=None, **xgb_params) -> None:
         self.feature_order = list(X.columns)
         y_encoded = self.label_encoder.fit_transform(y)
-        params = {
-            "objective": "multi:softprob",
-            "num_class": len(self.label_encoder.classes_),
-            "eval_metric": "mlogloss",
+        n_classes = len(self.label_encoder.classes_)
+        # multi:softprob with num_class=2 makes XGBoost return a 2-column
+        # matrix from predict() rather than 1-D labels, which then breaks
+        # every sklearn metric. Binary needs the binary objective.
+        if n_classes == 2:
+            params = {"objective": "binary:logistic", "eval_metric": "logloss"}
+        else:
+            params = {
+                "objective": "multi:softprob",
+                "num_class": n_classes,
+                "eval_metric": "mlogloss",
+            }
+        params |= {
             "tree_method": "hist",
             "random_state": 42,
             "n_jobs": -1,

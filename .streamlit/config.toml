@@ -1,0 +1,14 @@
+# SOC consoles are dark by convention -- analysts work long shifts in dim
+# rooms. These values match pipeline/ui.py's token set; change both together.
+[theme]
+base = "dark"
+primaryColor = "#3987e5"
+backgroundColor = "#10151a"
+secondaryBackgroundColor = "#171d23"
+textColor = "#e6edf3"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

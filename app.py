@@ -1,54 +1,92 @@
 """BEACON — Behavioral Explainable AI for Cyber Operations Network.
 
-Landing page for the Streamlit dashboard. Run with:
-    streamlit run app.py
+Console landing page. Run with: streamlit run app.py
 """
 import streamlit as st
 
-st.set_page_config(page_title="BEACON", page_icon="🛰️", layout="wide")
+from pipeline.ui import engine_status, inject_theme, kpi_strip, render
+from pipeline.viz import headline, load_metrics
 
-st.title("🛰️ BEACON")
-st.subheader("Behavioral Explainable AI for Cyber Operations Network")
+st.set_page_config(page_title="BEACON Triage Console", page_icon="🛰️", layout="wide")
+render(inject_theme())
 
-st.markdown(
-    """
-BEACON classifies a piece of software's behavior — captured either as
-**network-flow** telemetry or **memory-dump** telemetry — into one of nine
-malware categories or benign, and explains every prediction with SHAP so an
-analyst can see exactly which behavioral features drove the call.
-"""
-)
+net, mem = load_metrics("network"), load_metrics("memory")
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Malware categories", "9")
-col2.metric("Behavioral data streams", "2")
-col3.metric("Model + explainability", "XGBoost + SHAP")
-col4.metric("Memory model status", "Trained ✅")
 
-st.divider()
+def net_block(unit: str) -> dict | None:
+    """headline() falls back to whatever block a metrics file has, which
+    would label a flow-level figure as 'per capture' on a file written
+    before sample-level scoring existed. Only report a unit the file has;
+    a file with neither block predates that split and measured flow level."""
+    if not net:
+        return None
+    if "sample_level" not in net and "flow_level" not in net:
+        return headline(net) if unit == "flow" else None
+    if f"{unit}_level" not in net:
+        return None
+    return headline(net, unit)
 
-c1, c2, c3, c4 = st.columns(4)
-with c1:
-    st.markdown("### 🧬 Multiclass Classification")
-    st.write("Predicts one of nine malware families, or benign — not just malicious/not.")
-with c2:
-    st.markdown("### 🔀 Dual-Source Evidence")
-    st.write("Independent classifiers for network-flow and memory-forensic behavior.")
-with c3:
-    st.markdown("### 🔍 Per-Prediction Explanation")
-    st.write("Every prediction ships with the SHAP-ranked features that drove it.")
-with c4:
-    st.markdown("### 📊 Analyst Dashboard")
-    st.write("Upload a CSV, get a category, a confidence score, a risk level, and why.")
 
-st.divider()
-st.info(
-    "**Status:** the Memory-stream classifier is trained on the real BCCC "
-    "Mal-NetMemLog dataset and live in this dashboard. The Network-stream "
-    "classifier has not been trained yet — see the Network Detection page "
-    "for what's blocking it.",
-    icon="ℹ️",
-)
+net_sample, net_flow, mem_head = net_block("sample"), net_block("flow"), headline(mem)
 
-st.page_link("pages/2_Memory_Detection.py", label="Try the Memory Detection demo →", icon="🧠")
-st.page_link("pages/3_About_Methodology.py", label="Learn about the project →", icon="📖")
+with st.sidebar:
+    render('<div class="bx-label">Engine status</div>')
+    render(engine_status("Network model", "loaded" if net else "not trained",
+                              ok=bool(net)))
+    render(engine_status("Memory model", "loaded" if mem else "not trained",
+                              ok=bool(mem)))
+    render('<div class="bx-label" style="margin-top:14px">Dataset</div>')
+    render('<div class="bx-status"><div><div class="mt">BCCC-Mal-NetMem-2025<br>'
+                '9 categories · 2 streams<br>local inference only</div></div></div>')
+
+st.markdown("# BEACON Triage Console")
+st.caption("Behavioral Explainable AI for Cyber Operations Network — classifies "
+           "network-flow and memory-forensic telemetry into one of nine malware "
+           "categories or benign, with a SHAP explanation behind every verdict.")
+
+tiles = [{"label": "Categories", "value": "9", "sub": "8 malware + benign"},
+         {"label": "Streams", "value": "2", "sub": "network + memory"}]
+if net_sample:
+    tiles.append({"label": "Network accuracy", "value": f"{net_sample['accuracy']:.1%}",
+                  "sub": f"per capture · n={net_sample['n']:,}"})
+if net_flow:
+    tiles.append({"label": "Network, per flow", "value": f"{net_flow['accuracy']:.1%}",
+                  "sub": f"n={net_flow['n']:,} flows"})
+if not net:
+    tiles.append({"label": "Network model", "value": "—", "sub": "not trained"})
+if mem_head:
+    tiles.append({"label": "Memory accuracy", "value": f"{mem_head['accuracy']:.1%}",
+                  "sub": f"per sample · n={mem_head['n']:,}"})
+else:
+    tiles.append({"label": "Memory model", "value": "—", "sub": "not trained"})
+
+render(kpi_strip(tiles))
+
+if net_sample and net_flow:
+    render('<div class="bx-note" style="margin-top:14px"><strong>Two units, two '
+        "questions.</strong> Per capture is how the system is used — a capture's "
+        "flows are combined into one verdict, so individual flow errors cancel out. "
+        "Per flow is the harder underlying task. Neither is the 'real' number alone."
+        "</div>")
+
+render("<hr>")
+
+c1, c2, c3, c4 = st.columns(4, gap="medium")
+for col, (title, body) in zip((c1, c2, c3, c4), [
+    ("Multiclass verdicts", "Nine malware families or benign — not a binary "
+                            "malicious/not call."),
+    ("Dual-source evidence", "Independent classifiers over network-flow and "
+                             "memory-forensic behaviour."),
+    ("Explained decisions", "Every verdict ships with the SHAP-ranked features "
+                            "that produced it."),
+    ("Analyst triage", "Severity, confidence against an action threshold, and a "
+                       "session detections log."),
+]):
+    with col:
+        st.markdown(f"##### {title}")
+        st.caption(body)
+
+render("<hr>")
+st.page_link("pages/1_Network_Detection.py", label="Analyse network capture", icon="🌐")
+st.page_link("pages/2_Memory_Detection.py", label="Analyse memory capture", icon="🧠")
+st.page_link("pages/3_About_Methodology.py", label="Model card & methodology", icon="◈")
