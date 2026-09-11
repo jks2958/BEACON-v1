@@ -1,12 +1,14 @@
-# Light product-console theme, at the user's direction (replaces the
-# earlier dark SOC-console skin). These values match pipeline/ui.py's
-# TOKENS and pipeline/viz.py's LIGHT palette -- change all three together.
+# Dark command-console theme by default, matching pipeline/ui.py's
+# DARK_TOKENS -- dark is the app's primary look (the in-app sidebar
+# toggle switches pipeline/ui.py's own CSS to LIGHT_TOKENS at runtime,
+# but Streamlit's native chrome -- buttons, inputs, this config -- can
+# only be set statically here, so it defaults to match the primary look).
 [theme]
-base = "light"
-primaryColor = "#3d63e0"
-backgroundColor = "#f5f7fb"
-secondaryBackgroundColor = "#ffffff"
-textColor = "#151b2c"
+base = "dark"
+primaryColor = "#22d3ee"
+backgroundColor = "#080b14"
+secondaryBackgroundColor = "#111827"
+textColor = "#f3f6ff"
 
 [server]
 headless = true

@@ -3,10 +3,9 @@
 Every figure here is read from models/*_metrics.json rather than typed in,
 so the page cannot drift from what was actually measured.
 """
-import pandas as pd
 import streamlit as st
 
-from pipeline.ui import render, sidebar_footer
+from pipeline.ui import metrics_table, render, sidebar_footer
 from pipeline.viz import headline, load_metrics
 
 net, mem = load_metrics("network"), load_metrics("memory")
@@ -52,13 +51,11 @@ for stream_name, metrics, unit, label in [
         h = None
     if h:
         rows.append({"Stream": stream_name, "Unit": label,
-                     "Accuracy": h["accuracy"], "Macro F1": h["macro_f1"], "n": h["n"]})
+                     "Accuracy": f"{h['accuracy']:.1%}", "Macro F1": f"{h['macro_f1']:.3f}",
+                     "n": f"{h['n']:,}"})
 
 if rows:
-    df = pd.DataFrame(rows)
-    st.dataframe(
-        df.style.format({"Accuracy": "{:.1%}", "Macro F1": "{:.3f}", "n": "{:,}"}),
-        use_container_width=True, hide_index=True)
+    render(metrics_table(rows, ["Stream", "Unit", "Accuracy", "Macro F1", "n"]))
 else:
     st.warning("No metrics found — run the training scripts first.")
 
@@ -69,7 +66,7 @@ st.info(
     "verdict, so individual flow errors cancel out. *Per flow* is the harder "
     "underlying task — classifying a single flow in isolation. Quoting the "
     "per-capture number without its unit would overstate what the model does.",
-    icon="📏",
+    icon=":material/straighten:",
 )
 
 st.markdown("## Honest limitations")

@@ -10,7 +10,7 @@ page to see a genuine SHAP explanation.
 import pandas as pd
 import streamlit as st
 
-from pipeline.ui import render, sidebar_footer
+from pipeline.ui import current_theme_name, icon, render, sidebar_footer
 from pipeline.viz import load_metrics, shap_contribution_chart
 
 net_metrics, mem_metrics = load_metrics("network"), load_metrics("memory")
@@ -61,7 +61,7 @@ with right:
         {"feature": "total_header_bytes", "value": 0.71, "shap_value": -0.34},
         {"feature": "packets_count", "value": 0.55, "shap_value": -0.48},
     ])
-    st.altair_chart(shap_contribution_chart(example, "light"), use_container_width=True)
+    st.altair_chart(shap_contribution_chart(example, current_theme_name()), use_container_width=True)
     st.caption("These are real Network-stream feature names (verified against "
                "`models/network_preprocessing_artifacts.joblib`), shown here with "
                "illustrative numbers to explain how to read the chart.")
@@ -70,14 +70,14 @@ st.markdown("---")
 st.markdown("## Where this shows up")
 c1, c2 = st.columns(2, gap="medium")
 with c1:
-    render('<div class="bx-card"><h2>🌐 Network stream</h2>'
+    render(f'<div class="bx-card"><h2>{icon("hub", 18)} Network stream</h2>'
            '<div class="sub">342 features, identifier columns excluded</div>'
-           "<p style='margin:0;font-size:13px;color:#4b5675'>Explains a representative "
+           "<p style='margin:0;font-size:13px'>Explains a representative "
            "flow the model assigned to the verdict category, since a capture is hundreds "
            "of flows and no single one is privileged.</p></div>")
 with c2:
-    render('<div class="bx-card"><h2>🧠 Memory stream</h2>'
+    render(f'<div class="bx-card"><h2>{icon("psychology", 18)} Memory stream</h2>'
            '<div class="sub">94 features from raw Volatility plugin output</div>'
-           "<p style='margin:0;font-size:13px;color:#4b5675'>A memory sample is usually "
+           "<p style='margin:0;font-size:13px'>A memory sample is usually "
            "one row, so the explanation is computed directly for it — no aggregation "
            "needed.</p></div>")

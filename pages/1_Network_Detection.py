@@ -9,8 +9,8 @@ import pandas as pd
 import streamlit as st
 
 from pipeline.controller import DashboardController, StreamUnavailable, risk_level
-from pipeline.ui import (detections_table, kpi_strip, probability_bars, record_detection,
-                         render, sidebar_footer, verdict_card)
+from pipeline.ui import (current_theme_name, detections_table, kpi_strip, probability_bars,
+                         record_detection, render, sidebar_footer, verdict_card)
 from pipeline.viz import headline, load_metrics, shap_contribution_chart
 
 
@@ -33,7 +33,7 @@ except StreamUnavailable:
         "`NetCSVs/<Category>/*.csv` data under `data/raw/NetCSVs/` and run "
         "`python scripts/train_network.py`. This page picks up "
         "`models/network_classifier.joblib` automatically once it exists.",
-        icon="🚧",
+        icon=":material/construction:",
     )
     st.stop()
 
@@ -49,7 +49,8 @@ uploaded = st.file_uploader("Network flow CSV", type="csv", label_visibility="co
 
 if uploaded is None:
     st.info("Upload a network capture CSV to run a classification. Any file from "
-            "`data/raw/NetCSVs/<Category>/` works as a test sample.", icon="⬆️")
+            "`data/raw/NetCSVs/<Category>/` works as a test sample.",
+            icon=":material/upload_file:")
     render('<div class="bx-label" style="margin-top:22px">Detections this session</div>')
     render(detections_table(st.session_state.get("detections", [])))
     st.stop()
@@ -106,14 +107,14 @@ with summary_tab:
         render(probability_bars(result["aggregate_probabilities"], verdict))
     with right:
         render('<div class="bx-label">Top contributing features</div>')
-        st.altair_chart(shap_contribution_chart(result["top_features"], "light"),
+        st.altair_chart(shap_contribution_chart(result["top_features"], current_theme_name()),
                         use_container_width=True)
 
 with explain_tab:
     st.markdown(f"Blue pushes the verdict toward **{verdict}**; red pushes away. "
                 "Computed for a representative flow the model assigned to the verdict "
                 "category, so the explanation matches the answer it explains.")
-    st.altair_chart(shap_contribution_chart(result["top_features"], "light"),
+    st.altair_chart(shap_contribution_chart(result["top_features"], current_theme_name()),
                     use_container_width=True)
 
 with raw_tab:
