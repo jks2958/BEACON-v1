@@ -163,7 +163,7 @@ def inject_theme() -> str:
     shadow = "0 1px 2px rgba(0,0,0,.35)" if dark else "0 1px 2px rgba(21,27,44,.04)"
     return f"""
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Orbitron:wght@700;800;900&display=swap">
 <style>
   /* [data-testid*="Icon"] (not just stIconMaterial) is load-bearing --
      Streamlit uses several icon testids (stIconMaterial for nav/buttons,
@@ -212,7 +212,10 @@ def inject_theme() -> str:
   /* padding-top clears the fixed sidebar_brand_bar() overlay (see below) --
      it needs to be taller than that bar so the nav's first item doesn't
      render underneath it. */
-  [data-testid="stSidebarNav"] {{ padding-top: 84px; }}
+  /* 81px bar (16px+16px padding + 48px badge + 1px border) + a 15px
+     breathing gap before the first nav item -- not an arbitrary number,
+     recomputed each time the brand bar's own height changes. */
+  [data-testid="stSidebarNav"] {{ padding-top: 96px; }}
   [data-testid="stSidebarNav"] a {{ border-radius: 8px; margin: 1px 8px; padding: 2px 4px; }}
   [data-testid="stSidebarNav"] a p {{ font-size: .87rem; font-weight: 500; color: {t['ink2']}; }}
   [data-testid="stSidebarNav"] a span[data-testid="stIconMaterial"] {{ color: {t['muted']}; }}
@@ -392,14 +395,41 @@ def inject_theme() -> str:
      A transformed ancestor becomes the containing block for a fixed
      descendant, so this still slides away with the sidebar's own
      collapse animation rather than staying stranded on screen. */
+  /* Fixed dark background, like the hero banner and the badge below --
+     the wordmark's chrome-gradient fill (white -> light blue-grey) is
+     brand chrome, not page body content, and would go invisible against
+     a white sidebar panel the moment the toggle switched to light. */
   .bx-sidebar-brand {{ position: fixed; top: 0; left: 0; z-index: 1000; width: 300px;
-    display: flex; align-items: center; gap: 10px; padding: 14px 18px;
-    background: {t['panel']}; border-bottom: 1px solid {t['line']}; border-right: 1px solid {t['line']}; }}
-  .bx-sidebar-brand .name {{ font-weight: 800; font-size: 15px; letter-spacing: -.01em; color: {t['ink']}; }}
-  .bx-sidebar-brand .tag {{ font-size: 9.5px; color: {t['muted']}; line-height: 1.3; margin-top: 1px; }}
-  .bx-brandmark {{ width: 42px; height: 42px; border-radius: 10px; background: {t['badge_bg']};
+    display: flex; align-items: center; gap: 12px; padding: 16px 18px;
+    background: #0a0e1a; border-bottom: 1px solid #1c2740; border-right: 1px solid #1c2740; }}
+  .bx-sidebar-brand .tag {{ font-size: 9.5px; color: #7c8aa8; line-height: 1.3; margin-top: 3px; }}
+  /* Badge grew from 34px (the previous, simpler bold-"B" mark) to fit
+     this shield+lighthouse mark's finer linework -- it reads noticeably
+     softer than the old mark at the smaller size. */
+  .bx-brandmark {{ width: 48px; height: 48px; border-radius: 11px; background: {t['badge_bg']};
     display: flex; align-items: center; justify-content: center; flex: none; overflow: hidden; }}
-  .bx-brandmark img {{ width: 34px; height: 34px; object-fit: contain; }}
+  .bx-brandmark img {{ width: 40px; height: 40px; object-fit: contain; }}
+
+  /* ---- wordmark: chrome-gradient "BEACON" with a glowing dot standing
+     in for the "A"'s crossbar, matching the reference logo's lettering.
+     Sized entirely via the caller's own font-size (em-relative dot), so
+     the same markup serves both the small sidebar label and the large
+     hero title. ---- */
+  .bx-wordmark {{ font-family: "Orbitron", "Inter", sans-serif; font-weight: 900;
+    letter-spacing: .01em; line-height: 1; white-space: nowrap; }}
+  .bx-wordmark, .bx-wordmark .slot {{
+    background: linear-gradient(180deg, #ffffff 0%, #b9c9dd 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }}
+  /* The slot needs the SAME gradient+clip declared again on itself, not
+     just inherited -- position:relative (needed to place the dot) makes
+     it an atomic box the parent's text-clip doesn't paint through, which
+     silently blanks the "A" glyph entirely otherwise. Found by testing
+     in a browser: reasoning about the CSS alone said this should work. */
+  .bx-wordmark .slot {{ position: relative; }}
+  .bx-wordmark .dot {{ position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%);
+    width: .15em; height: .15em; border-radius: 50%; background: #22d3ee;
+    box-shadow: 0 0 .4em .05em rgba(34,211,238,.9); }}
 
   /* ---- hero banner: full-width, always dark regardless of the toggle
      (a brand splash, not page body content) -- the cover photo assumes a
@@ -448,13 +478,23 @@ def _hero_cover_data_uri() -> str:
     return f"data:image/jpeg;base64,{encoded}"
 
 
+def wordmark(size_px: int) -> str:
+    """The "BEACON" logotype: a heavy geometric face, a chrome gradient
+    fill, and a glowing dot standing in for the "A"'s crossbar -- matching
+    the reference logo's lettering. size_px sets the font-size; the dot
+    is sized and positioned in em units off that, so the same markup
+    serves both the small sidebar label and the large hero title."""
+    return (f'<span class="bx-wordmark" style="font-size:{size_px}px">BE'
+            f'<span class="slot">A<span class="dot"></span></span>CON</span>')
+
+
 def sidebar_brand_bar() -> str:
     """Fixed brand bar overlaying the sidebar's top-left corner -- see the
     .bx-sidebar-brand CSS comment for why position:fixed is what makes
     this actually render above st.navigation()'s menu."""
     return (f'<div class="bx-sidebar-brand"><div class="bx-brandmark">'
             f'<img src="{_logo_data_uri()}" alt="BEACON"></div>'
-            f'<div><div class="name">BEACON</div>'
+            f'<div>{wordmark(17)}'
             f'<div class="tag">Explainable malware detection</div></div></div>')
 
 
@@ -475,8 +515,8 @@ def header_band(subtitle: str, eyebrow: str = "CYBER COMMAND CENTER",
   <div class="bx-hero-scrim"></div>
   <div class="bx-hero-content">
     <div class="bx-eyebrow">{_esc(eyebrow)}</div>
-    <div style="font-weight:800;font-size:26px;letter-spacing:-.01em;color:#f8fafc">BEACON</div>
-    <div style="font-size:12px;color:#94a3b8;margin-top:2px;max-width:420px">{_esc(subtitle)}</div>
+    <div style="margin-top:1px">{wordmark(30)}</div>
+    <div style="font-size:12px;color:#94a3b8;margin-top:4px;max-width:420px">{_esc(subtitle)}</div>
   </div>
   <div class="bx-hero-content" style="text-align:right;background:rgba(5,8,16,.55);
        padding:8px 14px;border-radius:9px;backdrop-filter:blur(2px)">
