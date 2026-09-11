@@ -217,12 +217,12 @@ def inject_theme() -> str:
      (Streamlit's native offset, unrelated to anything here) before this
      padding is even added, and the first link then sits ~3px inside
      that. So: bar height + a tight 6px visible gap - 76px native offset
-     - 3px inner offset = padding-top. With the landscape logo photo the
-     bar is 121.5px tall, giving 48px (re-measured via a live browser at
-     swap time -- this constant tracks the current logo image's aspect
-     ratio and needs re-measuring, not recomputing on paper, whenever
-     that image changes). */
-  [data-testid="stSidebarNav"] {{ padding-top: 48px; }}
+     - 3px inner offset = padding-top. With the current wide banner logo
+     the bar is 119.4px tall, giving 46px (re-measured via a live
+     browser at swap time -- this constant tracks the current logo
+     image's aspect ratio and needs re-measuring, not recomputing on
+     paper, whenever that image changes). */
+  [data-testid="stSidebarNav"] {{ padding-top: 46px; }}
   [data-testid="stSidebarNav"] a {{ border-radius: 8px; margin: 1px 8px; padding: 2px 4px; }}
   [data-testid="stSidebarNav"] a p {{ font-size: .87rem; font-weight: 500; color: {t['ink2']}; }}
   [data-testid="stSidebarNav"] a span[data-testid="stIconMaterial"] {{ color: {t['muted']}; }}
@@ -411,7 +411,7 @@ def inject_theme() -> str:
   .bx-sidebar-brand {{ position: fixed; top: 0; left: 0; z-index: 1000; width: 300px;
     padding: 10px 14px 6px; background: #0a0e1a; border-bottom: 1px solid #1c2740;
     border-right: 1px solid #1c2740; line-height: 0; text-align: center; }}
-  .bx-sidebar-brand img {{ width: 178px; height: auto; display: inline-block; border-radius: 8px; }}
+  .bx-sidebar-brand img {{ width: 240px; height: auto; display: inline-block; border-radius: 8px; }}
 
   /* ---- hero banner: full-width, always dark regardless of the toggle
      (a brand splash, not page body content) -- the cover photo assumes a
