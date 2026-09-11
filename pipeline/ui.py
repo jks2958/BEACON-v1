@@ -220,7 +220,7 @@ def inject_theme() -> str:
      - 3px inner offset = padding-top. This constant tracks the current
      logo image's aspect ratio and needs re-measuring in a live browser,
      not recomputing on paper, whenever that image changes. */
-  [data-testid="stSidebarNav"] {{ padding-top: 102px; }}
+  [data-testid="stSidebarNav"] {{ padding-top: 28px; }}
   [data-testid="stSidebarNav"] a {{ border-radius: 8px; margin: 1px 8px; padding: 2px 4px; }}
   [data-testid="stSidebarNav"] a p {{ font-size: .87rem; font-weight: 500; color: {t['ink2']}; }}
   [data-testid="stSidebarNav"] a span[data-testid="stIconMaterial"] {{ color: {t['muted']}; }}
@@ -409,7 +409,7 @@ def inject_theme() -> str:
   .bx-sidebar-brand {{ position: fixed; top: 0; left: 0; z-index: 1000; width: 300px;
     padding: 10px 14px 6px; background: #0a0e1a; border-bottom: 1px solid #1c2740;
     border-right: 1px solid #1c2740; line-height: 0; text-align: center; }}
-  .bx-sidebar-brand img {{ width: 220px; height: auto; display: inline-block; border-radius: 8px; }}
+  .bx-sidebar-brand img {{ width: 270px; height: auto; display: inline-block; border-radius: 8px; }}
 
   /* ---- hero banner: full-width, always dark regardless of the toggle
      (a brand splash, not page body content) -- the cover photo assumes a
