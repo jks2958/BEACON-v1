@@ -1,0 +1,101 @@
+{
+  "stream": "malmem_specialist",
+  "source": "CIC-MalMem-2022 (University of New Brunswick) -- NOT the BCCC-Mal-NetMem-2025 dataset the rest of BEACON is trained on",
+  "family_label_column_used": "Category",
+  "class_label_column_used": "Class",
+  "categories": [
+    "Benign",
+    "Ransomware",
+    "Spyware",
+    "Trojan"
+  ],
+  "train_rows": 46449,
+  "test_rows": 11613,
+  "n_features": 55,
+  "corr_threshold": 1.0,
+  "optuna_trials": 20,
+  "best_inner_val_macro_f1": 0.8210421745892491,
+  "best_params": {
+    "n_estimators": 200,
+    "max_depth": 8,
+    "learning_rate": 0.13994613949142548,
+    "subsample": 0.8601006036999842,
+    "colsample_bytree": 0.8495049836716618
+  },
+  "best_params_suggested": {
+    "n_estimators": 350,
+    "max_depth": 8,
+    "learning_rate": 0.13994613949142548,
+    "subsample": 0.8601006036999842,
+    "colsample_bytree": 0.8495049836716618
+  },
+  "test_accuracy": 0.8812537673297167,
+  "test_macro_f1": 0.820048369346374,
+  "test_classification_report": {
+    "Benign": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 5847.0
+    },
+    "Ransomware": {
+      "precision": 0.7586586036283672,
+      "recall": 0.7240293809024134,
+      "f1-score": 0.7409395973154362,
+      "support": 1906.0
+    },
+    "Spyware": {
+      "precision": 0.77880859375,
+      "recall": 0.8125318390219053,
+      "f1-score": 0.7953128895537273,
+      "support": 1963.0
+    },
+    "Trojan": {
+      "precision": 0.7435492364402317,
+      "recall": 0.7443331576172905,
+      "f1-score": 0.743940990516333,
+      "support": 1897.0
+    },
+    "accuracy": 0.8812537673297167,
+    "macro avg": {
+      "precision": 0.8202541084546497,
+      "recall": 0.8202235943854023,
+      "f1-score": 0.820048369346374,
+      "support": 11613.0
+    },
+    "weighted avg": {
+      "precision": 0.8811088839726202,
+      "recall": 0.8812537673297167,
+      "f1-score": 0.8810545193909128,
+      "support": 11613.0
+    }
+  },
+  "small_class_warning": null,
+  "binary_diagnostic_vs_dataset_class_column": {
+    "Benign": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 5847.0
+    },
+    "Malware": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 5766.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 11613.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 11613.0
+    }
+  }
+}
