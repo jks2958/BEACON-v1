@@ -216,12 +216,13 @@ def inject_theme() -> str:
      brand bar sits) -- stSidebarNav's own box already starts 76px down
      (Streamlit's native offset, unrelated to anything here) before this
      padding is even added, and the first link then sits ~3px inside
-     that. So: 165px bar height + a tight 6px visible gap - 76px native
-     offset - 3px inner offset = 92px. Measured empirically (the naive
-     "bar height + gap" number left an 87px gap in practice, not 8px) --
-     don't recompute this from the bar height alone without re-measuring
-     stSidebarNav's own top and the first link's offset inside it. */
-  [data-testid="stSidebarNav"] {{ padding-top: 92px; }}
+     that. So: bar height + a tight 6px visible gap - 76px native offset
+     - 3px inner offset = padding-top. With the landscape logo photo the
+     bar is 121.5px tall, giving 48px (re-measured via a live browser at
+     swap time -- this constant tracks the current logo image's aspect
+     ratio and needs re-measuring, not recomputing on paper, whenever
+     that image changes). */
+  [data-testid="stSidebarNav"] {{ padding-top: 48px; }}
   [data-testid="stSidebarNav"] a {{ border-radius: 8px; margin: 1px 8px; padding: 2px 4px; }}
   [data-testid="stSidebarNav"] a p {{ font-size: .87rem; font-weight: 500; color: {t['ink2']}; }}
   [data-testid="stSidebarNav"] a span[data-testid="stIconMaterial"] {{ color: {t['muted']}; }}
