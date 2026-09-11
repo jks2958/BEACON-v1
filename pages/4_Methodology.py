@@ -77,6 +77,23 @@ st.markdown(
   memory-forensic feature space. A learning curve confirmed this is an
   *information* ceiling, not a data-quantity one: accuracy gained only
   +0.27 points over the final 20% of training data.
+- **Network's per-flow accuracy is an information ceiling too.** A matching
+  learning curve found the same pattern: per-flow accuracy gained -0.02
+  points and per-capture accuracy -0.30 points over the final 20% of
+  training data (both within noise). More captures would not move either
+  figure. The underlying cause: every flow in a capture inherits that
+  capture's malware-family label, including the large share that's
+  incidental traffic unrelated to the malware itself — no amount of
+  additional data resolves a label that's wrong for the row it's on.
+- **A per-flow noise filter was tried and made things worse.** Since the
+  label-inheritance problem above suggested filtering out training flows
+  that look Benign might help, we tested it: a separate classifier flagged
+  malware-labeled training flows that statistically resemble real Benign
+  traffic, and those were dropped before training. Accuracy improved on
+  the flows the filter approved (78.4% to 81.3%), but Trojan and Worm lost
+  40-43% of their training rows to the filter, and the net effect on the
+  full test set was worse, not better (68.3% to 66.8% per-flow accuracy).
+  The shipped model keeps the unfiltered training data.
 - **Exploit on the Memory stream is ~90% synthetic.** Only 80 real training
   samples exist, so its per-class figures are lower-confidence than the
   other eight. The Network stream has no such problem (250 real captures).
