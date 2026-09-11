@@ -1,4 +1,4 @@
-"""About / Methodology page.
+"""Methodology — model card and measured results.
 
 Every figure here is read from models/*_metrics.json rather than typed in,
 so the page cannot drift from what was actually measured.
@@ -6,23 +6,24 @@ so the page cannot drift from what was actually measured.
 import pandas as pd
 import streamlit as st
 
-from pipeline.ui import inject_theme, render
+from pipeline.ui import render, sidebar_footer
 from pipeline.viz import headline, load_metrics
 
-st.set_page_config(page_title="BEACON — About", page_icon="📖", layout="wide")
-
-render(inject_theme())
-st.markdown("# Model card & methodology")
-
-
 net, mem = load_metrics("network"), load_metrics("memory")
+
+with st.sidebar:
+    render(sidebar_footer(net_ok=bool(net), mem_ok=bool(mem)))
+
+st.markdown("# Methodology")
+st.caption("Model card, measured results, and the limitations reported alongside them.")
 
 st.markdown("## The problem")
 st.write(
     "Malware classifiers are typically accurate but opaque, and most are trained "
     "on a single behavioural source — usually network traffic — missing whatever "
     "signal only appears in memory. BEACON targets both gaps: a per-prediction "
-    "SHAP explanation, and independent classifiers over both evidence types."
+    "SHAP explanation (see the Explainability page), and independent classifiers "
+    "over both evidence types."
 )
 
 st.markdown("## The approach")
@@ -31,8 +32,8 @@ st.write(
     "(`pipeline/common.py`), so training and inference cannot drift apart. They "
     "differ only where the data demands it: the Memory stream needs cluster-based "
     "SMOTE for a severely underrepresented Exploit class, while the Network "
-    "stream's imbalance is a mild 5.1:1 and needs only class weighting. Both "
-    "train an XGBoost multiclass classifier explained via SHAP `TreeExplainer`."
+    "stream's imbalance is milder and needs only class weighting. Both train an "
+    "XGBoost multiclass classifier explained via SHAP `TreeExplainer`."
 )
 
 st.markdown("## Measured results")
@@ -82,9 +83,9 @@ st.markdown(
 - **Exploit on the Memory stream is ~90% synthetic.** Only 80 real training
   samples exist, so its per-class figures are lower-confidence than the
   other eight. The Network stream has no such problem (250 real captures).
-- **The two streams are not fused.** Network and memory records use entirely
-  different sample naming, so they cannot be joined per sample; BEACON runs
-  two independent classifiers rather than one fused model.
+- **The two streams are not fused.** Fusion was measured, not assumed
+  impossible — combining both streams scores 78.5% against 99.1% for the
+  Network stream alone, so BEACON runs two independent classifiers.
 - **Effective sample size.** Per-capture accuracy rests on a few hundred
   held-out captures, not the flow count — the interval is correspondingly
   wider.

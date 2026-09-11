@@ -1,26 +1,28 @@
-"""Network Detection — triage a network capture.
+"""Network Detection — a pinned, Network-only version of the Dashboard.
 
 A capture is hundreds of flows from ONE sample, so the verdict is the mean
 of their class probabilities rather than any single flow's call: both the
-operationally correct unit and far more accurate (measured 69.7% per flow
+operationally correct unit and far more accurate (measured 68.2% per flow
 vs 99.1% per capture).
 """
 import pandas as pd
 import streamlit as st
 
 from pipeline.controller import DashboardController, StreamUnavailable, risk_level
-from pipeline.ui import (detections_table, engine_status, inject_theme, kpi_strip,
-                         probability_bars, record_detection, render, verdict_band)
+from pipeline.ui import (detections_table, kpi_strip, probability_bars, record_detection,
+                         render, sidebar_footer, verdict_card)
 from pipeline.viz import headline, load_metrics, shap_contribution_chart
-
-st.set_page_config(page_title="BEACON — Network Detection", page_icon="🌐", layout="wide")
-render(inject_theme())
 
 
 @st.cache_resource
 def _load_controller(stream: str) -> DashboardController:
     return DashboardController(stream)
 
+
+net_metrics, mem_metrics = load_metrics("network"), load_metrics("memory")
+
+with st.sidebar:
+    render(sidebar_footer(net_ok=bool(net_metrics), mem_ok=bool(mem_metrics)))
 
 try:
     controller = _load_controller("network")
@@ -35,18 +37,8 @@ except StreamUnavailable:
     )
     st.stop()
 
-metrics = load_metrics("network")
-sample_head = headline(metrics, "sample") if metrics and "sample_level" in metrics else None
-flow_head = headline(metrics, "flow") if metrics and "flow_level" in metrics else None
-
-with st.sidebar:
-    render('<div class="bx-label">Engine status</div>')
-    render(engine_status("Network model",
-                              f"loaded · {len(controller.feature_cols)} features"))
-    render(engine_status("SHAP explainer", "TreeExplainer · ready"))
-    render('<div class="bx-label" style="margin-top:14px">Dataset</div>')
-    render('<div class="bx-status"><div><div class="mt">BCCC-Mal-NetMem-2025<br>'
-                '9 categories · local inference only</div></div></div>')
+sample_head = headline(net_metrics, "sample") if net_metrics and "sample_level" in net_metrics else None
+flow_head = headline(net_metrics, "flow") if net_metrics and "flow_level" in net_metrics else None
 
 st.markdown("# Analyse network capture")
 st.caption("Every flow in the capture is classified; the verdict combines them. "
@@ -84,24 +76,27 @@ record_detection(st.session_state, sample=uploaded.name, stream="network",
                  verdict=verdict, confidence=confidence, severity=severity,
                  rows=result["n_rows"])
 
-render(verdict_band(verdict, severity, confidence,
-                 f"{uploaded.name} · {result['n_rows']:,} flows · network_classifier.joblib"))
+left, right = st.columns([1, 1], gap="medium")
+with left:
+    render(verdict_card(verdict, severity, confidence,
+                        f"{uploaded.name} · {result['n_rows']:,} flows · network_classifier.joblib"))
+with right:
+    kpis = [
+        {"label": "Flows analysed", "value": f"{result['n_rows']:,}",
+         "sub": f"{consensus:.0%} individually agree"},
+        {"label": "Features used", "value": f"{len(controller.feature_cols)}",
+         "sub": "identifiers excluded"},
+        {"label": "Second choice", "value": runner_up, "sub": f"margin {margin:.1f} pt"},
+    ]
+    if sample_head:
+        kpis.append({"label": "Model accuracy", "value": f"{sample_head['accuracy']:.1%}",
+                     "sub": f"per capture · n={sample_head['n']:,}"})
+    if flow_head:
+        kpis.append({"label": "Per-flow accuracy", "value": f"{flow_head['accuracy']:.1%}",
+                     "sub": f"n={flow_head['n']:,} flows"})
+    render(kpi_strip(kpis))
 
-kpis = [
-    {"label": "Flows analysed", "value": f"{result['n_rows']:,}",
-     "sub": f"{consensus:.0%} individually agree"},
-    {"label": "Features used", "value": f"{len(controller.feature_cols)}",
-     "sub": "identifiers excluded"},
-    {"label": "Second choice", "value": runner_up, "sub": f"margin {margin:.1f} pt"},
-]
-if sample_head:
-    kpis.append({"label": "Model accuracy", "value": f"{sample_head['accuracy']:.1%}",
-                 "sub": f"per capture · n={sample_head['n']:,}"})
-if flow_head:
-    kpis.append({"label": "Per-flow accuracy", "value": f"{flow_head['accuracy']:.1%}",
-                 "sub": f"n={flow_head['n']:,} flows"})
-render(kpi_strip(kpis))
-
+st.markdown("")
 summary_tab, explain_tab, raw_tab = st.tabs(["Summary", "Explanation", "Raw features"])
 
 with summary_tab:
@@ -111,14 +106,14 @@ with summary_tab:
         render(probability_bars(result["aggregate_probabilities"], verdict))
     with right:
         render('<div class="bx-label">Top contributing features</div>')
-        st.altair_chart(shap_contribution_chart(result["top_features"], "dark"),
+        st.altair_chart(shap_contribution_chart(result["top_features"], "light"),
                         use_container_width=True)
 
 with explain_tab:
     st.markdown(f"Blue pushes the verdict toward **{verdict}**; red pushes away. "
                 "Computed for a representative flow the model assigned to the verdict "
                 "category, so the explanation matches the answer it explains.")
-    st.altair_chart(shap_contribution_chart(result["top_features"], "dark"),
+    st.altair_chart(shap_contribution_chart(result["top_features"], "light"),
                     use_container_width=True)
 
 with raw_tab:
