@@ -24,6 +24,7 @@
     "subsample": 0.7148598656309413,
     "colsample_bytree": 0.6055887974495078
   },
+  "best_params_note": "n_estimators corrected to the booster's actual round count; the training script had recorded Optuna's suggested value, which early stopping overrode before the final fit.",
   "flow_level": {
     "test_accuracy": 0.6824842392230362,
     "test_macro_f1": 0.6454189531890222,
