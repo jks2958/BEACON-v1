@@ -212,10 +212,12 @@ def inject_theme() -> str:
   /* padding-top clears the fixed sidebar_brand_bar() overlay (see below) --
      it needs to be taller than that bar so the nav's first item doesn't
      render underneath it. */
-  /* 81px bar (16px+16px padding + 48px badge + 1px border) + a 15px
-     breathing gap before the first nav item -- not an arbitrary number,
-     recomputed each time the brand bar's own height changes. */
-  [data-testid="stSidebarNav"] {{ padding-top: 96px; }}
+  /* 165px bar (10px+6px padding + 148px logo image at 178px wide,
+     1169:974 aspect ratio + 1px border) + a tight 8px gap before the
+     first nav item -- not an arbitrary number, recomputed each time the
+     brand bar's own height changes so slack here doesn't silently grow
+     into dead space above "Dashboard". */
+  [data-testid="stSidebarNav"] {{ padding-top: 173px; }}
   [data-testid="stSidebarNav"] a {{ border-radius: 8px; margin: 1px 8px; padding: 2px 4px; }}
   [data-testid="stSidebarNav"] a p {{ font-size: .87rem; font-weight: 500; color: {t['ink2']}; }}
   [data-testid="stSidebarNav"] a span[data-testid="stIconMaterial"] {{ color: {t['muted']}; }}
@@ -395,41 +397,16 @@ def inject_theme() -> str:
      A transformed ancestor becomes the containing block for a fixed
      descendant, so this still slides away with the sidebar's own
      collapse animation rather than staying stranded on screen. */
-  /* Fixed dark background, like the hero banner and the badge below --
-     the wordmark's chrome-gradient fill (white -> light blue-grey) is
-     brand chrome, not page body content, and would go invisible against
-     a white sidebar panel the moment the toggle switched to light. */
+  /* Fixed dark background, like the hero banner -- the logo image's own
+     glow assumes a dark ground and would look wrong against a white
+     sidebar panel the moment the toggle switched to light. Padding is
+     tight on purpose: this bar's own height sets how far the nav below
+     has to be pushed down (see stSidebarNav padding-top), so slack here
+     directly becomes dead space there. */
   .bx-sidebar-brand {{ position: fixed; top: 0; left: 0; z-index: 1000; width: 300px;
-    display: flex; align-items: center; gap: 12px; padding: 16px 18px;
-    background: #0a0e1a; border-bottom: 1px solid #1c2740; border-right: 1px solid #1c2740; }}
-  .bx-sidebar-brand .tag {{ font-size: 9.5px; color: #7c8aa8; line-height: 1.3; margin-top: 3px; }}
-  /* Badge grew from 34px (the previous, simpler bold-"B" mark) to fit
-     this shield+lighthouse mark's finer linework -- it reads noticeably
-     softer than the old mark at the smaller size. */
-  .bx-brandmark {{ width: 48px; height: 48px; border-radius: 11px; background: {t['badge_bg']};
-    display: flex; align-items: center; justify-content: center; flex: none; overflow: hidden; }}
-  .bx-brandmark img {{ width: 40px; height: 40px; object-fit: contain; }}
-
-  /* ---- wordmark: chrome-gradient "BEACON" with a glowing dot standing
-     in for the "A"'s crossbar, matching the reference logo's lettering.
-     Sized entirely via the caller's own font-size (em-relative dot), so
-     the same markup serves both the small sidebar label and the large
-     hero title. ---- */
-  .bx-wordmark {{ font-family: "Orbitron", "Inter", sans-serif; font-weight: 900;
-    letter-spacing: .01em; line-height: 1; white-space: nowrap; }}
-  .bx-wordmark, .bx-wordmark .slot {{
-    background: linear-gradient(180deg, #ffffff 0%, #b9c9dd 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }}
-  /* The slot needs the SAME gradient+clip declared again on itself, not
-     just inherited -- position:relative (needed to place the dot) makes
-     it an atomic box the parent's text-clip doesn't paint through, which
-     silently blanks the "A" glyph entirely otherwise. Found by testing
-     in a browser: reasoning about the CSS alone said this should work. */
-  .bx-wordmark .slot {{ position: relative; }}
-  .bx-wordmark .dot {{ position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%);
-    width: .15em; height: .15em; border-radius: 50%; background: #22d3ee;
-    box-shadow: 0 0 .4em .05em rgba(34,211,238,.9); }}
+    padding: 10px 14px 6px; background: #0a0e1a; border-bottom: 1px solid #1c2740;
+    border-right: 1px solid #1c2740; line-height: 0; text-align: center; }}
+  .bx-sidebar-brand img {{ width: 178px; height: auto; display: inline-block; border-radius: 8px; }}
 
   /* ---- hero banner: full-width, always dark regardless of the toggle
      (a brand splash, not page body content) -- the cover photo assumes a
@@ -478,24 +455,16 @@ def _hero_cover_data_uri() -> str:
     return f"data:image/jpeg;base64,{encoded}"
 
 
-def wordmark(size_px: int) -> str:
-    """The "BEACON" logotype: a heavy geometric face, a chrome gradient
-    fill, and a glowing dot standing in for the "A"'s crossbar -- matching
-    the reference logo's lettering. size_px sets the font-size; the dot
-    is sized and positioned in em units off that, so the same markup
-    serves both the small sidebar label and the large hero title."""
-    return (f'<span class="bx-wordmark" style="font-size:{size_px}px">BE'
-            f'<span class="slot">A<span class="dot"></span></span>CON</span>')
-
-
 def sidebar_brand_bar() -> str:
     """Fixed brand bar overlaying the sidebar's top-left corner -- see the
     .bx-sidebar-brand CSS comment for why position:fixed is what makes
-    this actually render above st.navigation()'s menu."""
-    return (f'<div class="bx-sidebar-brand"><div class="bx-brandmark">'
-            f'<img src="{_logo_data_uri()}" alt="BEACON"></div>'
-            f'<div>{wordmark(17)}'
-            f'<div class="tag">Explainable malware detection</div></div></div>')
+    this actually render above st.navigation()'s menu.
+
+    Renders the supplied logo image as-is (it already carries the
+    "BEACON" wordmark and tagline baked in) rather than cropping out just
+    the icon and re-setting the name in a separate custom wordmark --
+    one image, no extraction, no duplicated text."""
+    return f'<div class="bx-sidebar-brand"><img src="{_logo_data_uri()}" alt="BEACON"></div>'
 
 
 def _acronym_line() -> str:
