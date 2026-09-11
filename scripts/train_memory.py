@@ -315,6 +315,10 @@ def main():
         # against a booster carrying 400 rounds).
         "best_params": best_params,
         "best_params_suggested": study.best_params,
+        "best_params_note": "n_estimators corrected to the booster's actual round "
+                            "count; the training script had recorded Optuna's "
+                            "suggested value, which early stopping overrode before "
+                            "the final fit.",
         "test_macro_f1": float(macro_f1),
         "test_classification_report": classification_report(y_test, y_pred, digits=3, output_dict=True),
         "exploit_synthetic_fraction_in_training": float(is_synth[y_res == EXPLOIT_LABEL].mean()),

@@ -8,8 +8,6 @@ interpolate too many synthetic points from too few real ones.
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-
 import numpy as np
 import pandas as pd
 from imblearn.over_sampling import SMOTE
@@ -18,26 +16,20 @@ from sklearn.metrics import silhouette_score
 from sklearn.neighbors import NearestNeighbors
 
 
-class Resampler(ABC):
+class Resampler:
+    """Shared constructor only -- deliberately not an ABC with an
+    abstract `resample`. SmoteResampler.resample(X, y) rebalances every
+    class; ClusterBasedResampler.resample(X, y, minority_label) targets
+    one named minority class and returns a 3-tuple (X, y, is_synthetic)
+    instead of 2. Those signatures can't share one contract, and both
+    training scripts call each resampler by its concrete class, never
+    through this base type -- so there is no polymorphic call site for
+    a shared abstract method to serve, only a foot-gun for code that
+    might later try `resampler.resample(X, y)` generically."""
+
     def __init__(self, k_neighbors: int = 5, random_state: int = 42):
         self.k_neighbors = k_neighbors
         self.random_state = random_state
-
-    @abstractmethod
-    def resample(self, X: pd.DataFrame, y: pd.Series) -> tuple[pd.DataFrame, pd.Series]:
-        """Return a class-balanced (X, y) pair.
-
-        Note: ClusterBasedResampler intentionally does NOT implement this
-        exact signature -- it targets one named minority class rather
-        than rebalancing every class, so it takes an extra required
-        `minority_label` and returns a 3-tuple (X, y, is_synthetic).
-        The two resamplers are called directly by name in the training
-        scripts, not swapped polymorphically through this base type, so
-        that divergence is deliberate rather than a contract violation
-        to fix -- but it does mean `isinstance(r, Resampler)` code that
-        tries to call `.resample(X, y)` generically will break on
-        ClusterBasedResampler.
-        """
 
 
 class SmoteResampler(Resampler):

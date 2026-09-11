@@ -13,7 +13,9 @@ specific to the Network stream and absent from Memory:
      becomes an explicit indicator feature instead of being nulled away.
   3. Identifier columns (flow_id, timestamp, src_ip, dst_ip, protocol)
      must be dropped outright. Leaving them in is exactly what crashed
-     the original Training_XGBoost.ipynb at Optuna trial 0.
+     the original Training_XGBoost.ipynb at Optuna trial 0. `src_port`
+     is dropped too, but for an unrelated reason -- see IDENTIFIER_COLS
+     below, since it does not actually leak.
 
 Usage: python scripts/train_network.py
 """
@@ -50,16 +52,17 @@ CATEGORIES = ["Backdoor", "Benign", "Exploit", "HackTool", "Hoax",
 # "Zbenign" internally, which would otherwise become a spurious 10th class.
 LABEL_FIXES = {"Zbenign": "Benign"}
 
-# Pure identifiers -- never model features. src_ip/dst_ip in particular
-# would let the model memorise the lab's addressing rather than learn
-# behaviour.
+# Pure identifiers -- never model features. flow_id/timestamp/src_ip/
+# dst_ip/protocol would let the model memorise the lab's addressing and
+# capture mechanics rather than learn behaviour; those five leak.
 #
-# src_port is dropped for the same reason even though it measurably is
-# NOT leaking: an A/B test put it at global gain rank 76/343, and removing
+# src_port is on this list for a DIFFERENT reason: it measurably does
+# NOT leak. An A/B test put it at global gain rank 76/343, and removing
 # it cost 1.3 points flow-level while slightly IMPROVING sample-level
-# accuracy. It goes anyway because an OS-assigned ephemeral port has no
-# behavioural meaning, so keeping a feature that costs nothing and invites
-# a "why is that a feature?" objection is a bad trade.
+# accuracy. It's dropped anyway because an OS-assigned ephemeral port has
+# no behavioural meaning, so keeping a feature that costs nothing and
+# invites a "why is that a feature?" objection is a bad trade -- a
+# judgment call, not a leakage finding.
 # dst_port is KEPT -- 443/80/4444 genuinely encode service behaviour.
 IDENTIFIER_COLS = ["flow_id", "timestamp", "src_ip", "dst_ip", "protocol", "src_port"]
 
@@ -346,6 +349,10 @@ def main():
         # against a booster carrying 400 rounds).
         "best_params": best_params,
         "best_params_suggested": study.best_params,
+        "best_params_note": "n_estimators corrected to the booster's actual round "
+                            "count; the training script had recorded Optuna's "
+                            "suggested value, which early stopping overrode before "
+                            "the final fit.",
         "flow_level": {
             "test_accuracy": accuracy,
             "test_macro_f1": float(macro_f1),
