@@ -313,7 +313,7 @@ pipeline/           Shared, reusable pipeline code (training + inference)
   explain.py         SHAP TreeExplainer wrapper
   artifacts.py       ArtifactStore (save/load model + preprocessing bundle)
   controller.py       DashboardController used by the Streamlit pages
-  ui.py              SOC-console components (theme, verdict band, KPI strip)
+  ui.py              Light product-console components (theme, verdict card, stat strip)
   viz.py             Altair charts + palette
 scripts/
   train_memory.py     End-to-end training run (Memory stream)
@@ -321,8 +321,9 @@ scripts/
   train_fusion.py     Dual-stream fusion experiment (negative result)
   train_malmem_specialist.py  Separate 3rd model, external dataset
 tests/                pytest suite (96 tests, no raw data required)
-app.py                Streamlit landing page
-pages/                Network Detection / Memory Detection / About pages
+app.py                Entry point: st.set_page_config + st.navigation sidebar
+pages/                Dashboard / Network Detection / Memory Detection /
+                     Explainability / Methodology
 models/               Trained models + preprocessing artifacts + metrics (both streams)
 data/raw/             Extracted raw CSVs (gitignored — re-extract from the zips)
 *.ipynb               Original exploratory notebooks (kept for the record)

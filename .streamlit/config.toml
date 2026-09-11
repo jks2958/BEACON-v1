@@ -1,11 +1,12 @@
-# SOC consoles are dark by convention -- analysts work long shifts in dim
-# rooms. These values match pipeline/ui.py's token set; change both together.
+# Light product-console theme, at the user's direction (replaces the
+# earlier dark SOC-console skin). These values match pipeline/ui.py's
+# TOKENS and pipeline/viz.py's LIGHT palette -- change all three together.
 [theme]
-base = "dark"
-primaryColor = "#3987e5"
-backgroundColor = "#10151a"
-secondaryBackgroundColor = "#171d23"
-textColor = "#e6edf3"
+base = "light"
+primaryColor = "#3d63e0"
+backgroundColor = "#f5f7fb"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#151b2c"
 
 [server]
 headless = true
