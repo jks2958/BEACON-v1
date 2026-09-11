@@ -209,7 +209,10 @@ def inject_theme() -> str:
 
   /* ---- sidebar: native page nav + status footer ---- */
   [data-testid="stSidebar"] {{ background: {t['panel']}; border-right: 1px solid {t['line']}; }}
-  [data-testid="stSidebarNav"] {{ padding-top: 10px; }}
+  /* padding-top clears the fixed sidebar_brand_bar() overlay (see below) --
+     it needs to be taller than that bar so the nav's first item doesn't
+     render underneath it. */
+  [data-testid="stSidebarNav"] {{ padding-top: 84px; }}
   [data-testid="stSidebarNav"] a {{ border-radius: 8px; margin: 1px 8px; padding: 2px 4px; }}
   [data-testid="stSidebarNav"] a p {{ font-size: .87rem; font-weight: 500; color: {t['ink2']}; }}
   [data-testid="stSidebarNav"] a span[data-testid="stIconMaterial"] {{ color: {t['muted']}; }}
@@ -380,59 +383,155 @@ def inject_theme() -> str:
     background: {t['line']}; z-index: 0; }}
   .bx-step:first-child::before {{ display: none; }}
 
-  /* ---- header band ---- */
-  .bx-headband {{ display: flex; align-items: center; justify-content: space-between; gap: 18px;
-    padding: 4px 2px 18px; border-bottom: 1px solid {t['line']}; margin-bottom: 18px; flex-wrap: wrap; }}
-  .bx-brandmark {{ width: 46px; height: 46px; border-radius: 11px; background: {t['badge_bg']};
+  /* ---- sidebar brand bar: fixed, overlays the top-left corner ----
+     st.navigation()'s menu always renders at the very top of the sidebar
+     regardless of where a brand block is placed in the script, so normal
+     document flow can't put anything above it -- position:fixed escapes
+     that entirely (verified empirically: content is rendered where this
+     CSS puts it, not where Streamlit would have placed a static block).
+     A transformed ancestor becomes the containing block for a fixed
+     descendant, so this still slides away with the sidebar's own
+     collapse animation rather than staying stranded on screen. */
+  .bx-sidebar-brand {{ position: fixed; top: 0; left: 0; z-index: 1000; width: 300px;
+    display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+    background: {t['panel']}; border-bottom: 1px solid {t['line']}; border-right: 1px solid {t['line']}; }}
+  .bx-sidebar-brand .name {{ font-weight: 800; font-size: 15px; letter-spacing: -.01em; color: {t['ink']}; }}
+  .bx-sidebar-brand .tag {{ font-size: 9.5px; color: {t['muted']}; line-height: 1.3; margin-top: 1px; }}
+  .bx-brandmark {{ width: 34px; height: 34px; border-radius: 9px; background: {t['badge_bg']};
     display: flex; align-items: center; justify-content: center; flex: none; overflow: hidden; }}
-  .bx-brandmark img {{ width: 34px; height: 34px; object-fit: contain; }}
-  .bx-eyebrow {{ font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .16em;
-    color: {t['accent_ink']}; text-transform: uppercase; margin-bottom: 2px; }}
+  .bx-brandmark img {{ width: 25px; height: 25px; object-fit: contain; }}
 
-  @media (max-width: 720px) {{ .bx-verdict {{ flex-wrap: wrap; }} }}
+  /* ---- hero banner: full-width, always dark regardless of the toggle
+     (a brand splash, not page body content) -- the generated "globe"
+     graphic assumes a dark ground and would look wrong recoloured. ---- */
+  .bx-hero {{ position: relative; overflow: hidden; border-radius: 14px;
+    background: #080b14; padding: 20px 24px; margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }}
+  /* An IMG element, not an inline SVG element -- st.html() strips raw SVG
+     tags (a sanitizer default), silently dropping the whole graphic with
+     no error. Encoding it as a data: URI and loading it through an image
+     element (proven to work: the logo mark uses the same technique)
+     sidesteps that. Even mentioning the angle-bracket spelling of these
+     tag names in a CSS comment is enough to trigger the same stripping
+     mid-stylesheet and silently drop unrelated rules after it -- found by
+     bisecting this exact file, not by reasoning about it -- so this
+     comment spells them out as plain words instead.
+     object-fit:cover (not the default fill from width/height:100%) is
+     load-bearing too -- without it the 900:220 source stretches to match
+     the banner's actual aspect ratio, ovalling the globe. */
+  .bx-hero-svg {{ position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0;
+    object-fit: cover; object-position: right center; }}
+  /* `> div`, not `> *` -- the universal selector also matched the SVG
+     (also a direct child) and, being later in source order at equal
+     specificity, silently overrode its position:absolute back to
+     relative, collapsing it into normal flex flow and making it
+     effectively invisible. */
+  .bx-hero > div {{ position: relative; z-index: 1; }}
+  .bx-eyebrow {{ font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .16em;
+    color: #67e8f9; text-transform: uppercase; margin-bottom: 2px; }}
+
+  @media (max-width: 720px) {{ .bx-verdict {{ flex-wrap: wrap; }} .bx-sidebar-brand {{ position: static; width: auto; }} }}
 </style>
 """
 
 
-def sidebar_brand() -> str:
-    """Kept for backward compatibility; the header band (header_band()) is
-    what actually renders the brand now, since st.navigation()'s menu
-    renders at a fixed position at the top of the sidebar no matter where
-    a brand block is placed within it."""
-    return (f'<div class="bx-brand"><div class="bx-brandmark">'
+_HERO_GLOBE_SVG_RAW = """<svg viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMaxYMid slice">
+  <defs>
+    <radialGradient id="bxGlobeFill" cx="30%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#0d3b52"/>
+      <stop offset="55%" stop-color="#082033"/>
+      <stop offset="100%" stop-color="#050b14"/>
+    </radialGradient>
+    <radialGradient id="bxGlobeRim" cx="30%" cy="50%" r="75%">
+      <stop offset="88%" stop-color="#22d3ee" stop-opacity="0"/>
+      <stop offset="99%" stop-color="#22d3ee" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="840" cy="110" r="250" fill="url(#bxGlobeFill)"/>
+  <circle cx="840" cy="110" r="250" fill="none" stroke="url(#bxGlobeRim)" stroke-width="3"/>
+  <line x1="836.4" y1="27.6" x2="895.4" y2="38.6" stroke="#22d3ee" stroke-width="0.6" opacity="0.24"/>
+  <line x1="836.4" y1="27.6" x2="796.7" y2="58.9" stroke="#22d3ee" stroke-width="0.6" opacity="0.14"/>
+  <line x1="895.4" y1="38.6" x2="864.9" y2="52.9" stroke="#22d3ee" stroke-width="0.6" opacity="0.29"/>
+  <line x1="796.7" y1="58.9" x2="864.9" y2="52.9" stroke="#22d3ee" stroke-width="0.6" opacity="0.16"/>
+  <line x1="796.7" y1="58.9" x2="781.0" y2="98.3" stroke="#22d3ee" stroke-width="0.6" opacity="0.31"/>
+  <line x1="864.9" y1="52.9" x2="909.0" y2="70.4" stroke="#22d3ee" stroke-width="0.6" opacity="0.19"/>
+  <line x1="909.0" y1="70.4" x2="872.9" y2="86.1" stroke="#22d3ee" stroke-width="0.6" opacity="0.22"/>
+  <line x1="872.9" y1="86.1" x2="921.5" y2="93.8" stroke="#22d3ee" stroke-width="0.6" opacity="0.26"/>
+  <line x1="781.0" y1="98.3" x2="822.6" y2="104.0" stroke="#22d3ee" stroke-width="0.6" opacity="0.20"/>
+  <line x1="822.6" y1="104.0" x2="872.9" y2="86.1" stroke="#22d3ee" stroke-width="0.6" opacity="0.15"/>
+  <line x1="781.0" y1="98.3" x2="761.9" y2="128.2" stroke="#22d3ee" stroke-width="0.6" opacity="0.27"/>
+  <line x1="822.6" y1="104.0" x2="838.2" y2="137.6" stroke="#22d3ee" stroke-width="0.6" opacity="0.18"/>
+  <line x1="761.9" y1="128.2" x2="791.4" y2="150.9" stroke="#22d3ee" stroke-width="0.6" opacity="0.24"/>
+  <line x1="838.2" y1="137.6" x2="791.4" y2="150.9" stroke="#22d3ee" stroke-width="0.6" opacity="0.21"/>
+  <line x1="838.2" y1="137.6" x2="887.0" y2="145.3" stroke="#22d3ee" stroke-width="0.6" opacity="0.17"/>
+  <line x1="761.9" y1="128.2" x2="738.9" y2="160.5" stroke="#22d3ee" stroke-width="0.6" opacity="0.23"/>
+  <line x1="791.4" y1="150.9" x2="738.9" y2="160.5" stroke="#22d3ee" stroke-width="0.6" opacity="0.13"/>
+  <line x1="738.9" y1="160.5" x2="772.1" y2="182.0" stroke="#22d3ee" stroke-width="0.6" opacity="0.28"/>
+  <line x1="772.1" y1="182.0" x2="816.4" y2="186.9" stroke="#22d3ee" stroke-width="0.6" opacity="0.22"/>
+  <line x1="816.4" y1="186.9" x2="861.0" y2="180.4" stroke="#22d3ee" stroke-width="0.6" opacity="0.19"/>
+  <line x1="861.0" y1="180.4" x2="887.0" y2="145.3" stroke="#22d3ee" stroke-width="0.6" opacity="0.15"/>
+  <circle cx="836.4" cy="27.6" r="1.6" fill="#5eead4" opacity="0.75"/>
+  <circle cx="895.4" cy="38.6" r="1.3" fill="#5eead4" opacity="0.55"/>
+  <circle cx="796.7" cy="58.9" r="1.8" fill="#5eead4" opacity="0.82"/>
+  <circle cx="864.9" cy="52.9" r="1.4" fill="#5eead4" opacity="0.60"/>
+  <circle cx="909.0" cy="70.4" r="1.2" fill="#5eead4" opacity="0.42"/>
+  <circle cx="872.9" cy="86.1" r="2.1" fill="#5eead4" opacity="0.88"/>
+  <circle cx="921.5" cy="93.8" r="1.3" fill="#5eead4" opacity="0.50"/>
+  <circle cx="781.0" cy="98.3" r="1.9" fill="#5eead4" opacity="0.78"/>
+  <circle cx="822.6" cy="104.0" r="1.5" fill="#5eead4" opacity="0.66"/>
+  <circle cx="761.9" cy="128.2" r="1.7" fill="#5eead4" opacity="0.70"/>
+  <circle cx="838.2" cy="137.6" r="2.0" fill="#5eead4" opacity="0.85"/>
+  <circle cx="791.4" cy="150.9" r="1.3" fill="#5eead4" opacity="0.48"/>
+  <circle cx="887.0" cy="145.3" r="1.6" fill="#5eead4" opacity="0.62"/>
+  <circle cx="738.9" cy="160.5" r="1.4" fill="#5eead4" opacity="0.56"/>
+  <circle cx="772.1" cy="182.0" r="1.8" fill="#5eead4" opacity="0.74"/>
+  <circle cx="816.4" cy="186.9" r="1.2" fill="#5eead4" opacity="0.40"/>
+  <circle cx="861.0" cy="180.4" r="1.5" fill="#5eead4" opacity="0.58"/>
+</svg>"""
+
+
+def _hero_globe_data_uri() -> str:
+    encoded = base64.b64encode(_HERO_GLOBE_SVG_RAW.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
+
+
+def sidebar_brand_bar() -> str:
+    """Fixed brand bar overlaying the sidebar's top-left corner -- see the
+    .bx-sidebar-brand CSS comment for why position:fixed is what makes
+    this actually render above st.navigation()'s menu."""
+    return (f'<div class="bx-sidebar-brand"><div class="bx-brandmark">'
             f'<img src="{_logo_data_uri()}" alt="BEACON"></div>'
             f'<div><div class="name">BEACON</div>'
-            f'<div class="tag">Explainable malware<br>detection</div></div></div>')
+            f'<div class="tag">Explainable malware detection</div></div></div>')
 
 
 def header_band(subtitle: str, eyebrow: str = "CYBER COMMAND CENTER",
                 tags: str = "OBSERVE &middot; ANALYZE &middot; EXPLAIN &middot; DEFEND") -> str:
-    """Full-width header above the page content: brand mark + title + tagline
-    on the left, live status tags on the right. Lives in the MAIN area, not
-    the sidebar -- st.navigation()'s menu always renders at the very top of
-    the sidebar regardless of where a brand block is placed within it, so a
-    sidebar-based brand mark ends up below the nav rather than above it."""
+    """Full-width hero banner above the page content: eyebrow + title +
+    tagline on the left over a generated "globe" graphic, live status tags
+    on the right. The brand mark itself now lives in the sidebar (see
+    sidebar_brand_bar()) -- this banner carries the page title, matching
+    the reference layout's split between a compact sidebar mark and a
+    larger hero treatment for the title."""
     import datetime
 
-    t = tokens()
     now = datetime.datetime.now().strftime("%b %d, %Y &middot; %H:%M")
     return f"""
-<div class="bx-headband">
-  <div style="display:flex;align-items:center;gap:14px">
-    <div class="bx-brandmark"><img src="{_logo_data_uri()}" alt="BEACON"></div>
-    <div>
-      <div class="bx-eyebrow">{_esc(eyebrow)}</div>
-      <div style="font-weight:800;font-size:22px;letter-spacing:-.01em;color:{t['ink']}">BEACON</div>
-      <div style="font-size:11.5px;color:{t['muted']};margin-top:1px">{_esc(subtitle)}</div>
-    </div>
+<div class="bx-hero">
+  <img class="bx-hero-svg" src="{_hero_globe_data_uri()}" alt="">
+  <div>
+    <div class="bx-eyebrow">{_esc(eyebrow)}</div>
+    <div style="font-weight:800;font-size:26px;letter-spacing:-.01em;color:#f8fafc">BEACON</div>
+    <div style="font-size:12px;color:#94a3b8;margin-top:2px;max-width:420px">{_esc(subtitle)}</div>
   </div>
   <div style="text-align:right">
-    <div class="bx-mono" style="font-size:10px;letter-spacing:.14em;color:{t['muted']};
+    <div class="bx-mono" style="font-size:10px;letter-spacing:.14em;color:#64748b;
          text-transform:uppercase;white-space:nowrap;margin-bottom:6px">{tags}</div>
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:14px">
-      <span class="bx-mono" style="font-size:11.5px;color:{t['ink2']}">{now}</span>
+      <span class="bx-mono" style="font-size:11.5px;color:#cbd5e1">{now}</span>
       <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;
-            font-weight:600;color:{SEVERITY[current_theme_name()]['Low']}">
+            font-weight:600;color:#34d399">
         <i style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block"></i>
         System Online
       </span>

@@ -5,15 +5,13 @@ navigation via st.navigation()/st.Page(), and the dark/light theme toggle
 -- every page's title and icon are declared here, not via their own
 st.set_page_config, so Streamlit doesn't raise on a second call.
 
-The header band is a full-width bar in the MAIN content area, not the
-sidebar: st.navigation()'s menu renders at a fixed position -- the very
-top of the sidebar -- no matter where in the script st.navigation() or a
-surrounding `with st.sidebar:` block is called, so anything placed in the
-sidebar to sit "above" the nav actually renders below it instead. This
-sidesteps that constraint. The theme toggle is called here (inside a
-`with st.sidebar:` block, still below the nav for the same reason) so it
-lives in exactly one place rather than being duplicated across five pages
--- app.py runs on every navigation, not just the first load.
+The sidebar brand bar and the hero banner are both called here (not once
+per page) so they exist in exactly one place -- app.py runs on every
+navigation, not just the first load. st.navigation()'s menu renders at a
+fixed position at the very top of the sidebar no matter where in the
+script st.navigation() or a surrounding `with st.sidebar:` block is
+called, so sidebar_brand_bar() uses position:fixed CSS to sit above it
+rather than relying on document order, which can't win that fight.
 
 Run with: streamlit run app.py
 """
@@ -21,7 +19,7 @@ import os
 
 import streamlit as st
 
-from pipeline.ui import header_band, inject_theme, render, theme_toggle
+from pipeline.ui import header_band, inject_theme, render, sidebar_brand_bar, theme_toggle
 
 st.set_page_config(
     page_title="BEACON",
@@ -32,6 +30,7 @@ render(inject_theme())
 render(header_band("Behavioral Explainable AI for Cyber Operations Network"))
 
 with st.sidebar:
+    render(sidebar_brand_bar())
     theme_toggle()
 
 pages = [
