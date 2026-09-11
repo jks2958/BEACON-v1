@@ -212,12 +212,16 @@ def inject_theme() -> str:
   /* padding-top clears the fixed sidebar_brand_bar() overlay (see below) --
      it needs to be taller than that bar so the nav's first item doesn't
      render underneath it. */
-  /* 165px bar (10px+6px padding + 148px logo image at 178px wide,
-     1169:974 aspect ratio + 1px border) + a tight 8px gap before the
-     first nav item -- not an arbitrary number, recomputed each time the
-     brand bar's own height changes so slack here doesn't silently grow
-     into dead space above "Dashboard". */
-  [data-testid="stSidebarNav"] {{ padding-top: 173px; }}
+  /* This padding-top is NOT measured from the viewport (where the fixed
+     brand bar sits) -- stSidebarNav's own box already starts 76px down
+     (Streamlit's native offset, unrelated to anything here) before this
+     padding is even added, and the first link then sits ~3px inside
+     that. So: 165px bar height + a tight 6px visible gap - 76px native
+     offset - 3px inner offset = 92px. Measured empirically (the naive
+     "bar height + gap" number left an 87px gap in practice, not 8px) --
+     don't recompute this from the bar height alone without re-measuring
+     stSidebarNav's own top and the first link's offset inside it. */
+  [data-testid="stSidebarNav"] {{ padding-top: 92px; }}
   [data-testid="stSidebarNav"] a {{ border-radius: 8px; margin: 1px 8px; padding: 2px 4px; }}
   [data-testid="stSidebarNav"] a p {{ font-size: .87rem; font-weight: 500; color: {t['ink2']}; }}
   [data-testid="stSidebarNav"] a span[data-testid="stIconMaterial"] {{ color: {t['muted']}; }}
