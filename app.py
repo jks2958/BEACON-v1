@@ -27,7 +27,7 @@ st.set_page_config(
     layout="wide",
 )
 render(inject_theme())
-render(header_band("Behavioral Explainable AI for Cyber Operations Network"))
+render(header_band("Classifies malware from network and memory telemetry — and shows exactly why."))
 
 with st.sidebar:
     render(sidebar_brand_bar())

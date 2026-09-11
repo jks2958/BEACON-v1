@@ -498,14 +498,27 @@ def sidebar_brand_bar() -> str:
             f'<div class="tag">Explainable malware detection</div></div></div>')
 
 
-def header_band(subtitle: str, eyebrow: str = "CYBER COMMAND CENTER",
+def _acronym_line() -> str:
+    """"BEACON" spelled out, with the letters that form the name picked
+    out in the accent colour -- stands in for repeating the wordmark
+    itself, which already sits one tab away in the sidebar."""
+    letters = [("B", "ehavioral"), ("E", "xplainable"), ("A", "I for"),
+               ("C", "yber"), ("O", "perations"), ("N", "etwork")]
+    words = " ".join(
+        f'<span style="color:#67e8f9">{i}</span>{rest}' for i, rest in letters
+    )
+    return (f'<div style="font-size:18px;font-weight:700;letter-spacing:.01em;'
+            f'color:#e2e8f0">{words}</div>')
+
+
+def header_band(intro: str, eyebrow: str = "CYBER COMMAND CENTER",
                 tags: str = "OBSERVE &middot; ANALYZE &middot; EXPLAIN &middot; DEFEND") -> str:
-    """Full-width hero banner above the page content: eyebrow + title +
-    tagline on the left over the cover photo, live status tags on the
-    right. The brand mark itself now lives in the sidebar (see
-    sidebar_brand_bar()) -- this banner carries the page title, matching
-    the reference layout's split between a compact sidebar mark and a
-    larger hero treatment for the title."""
+    """Full-width hero banner above the page content: eyebrow + the
+    "BEACON" acronym spelled out + a one-line intro, over the cover
+    photo, with live status tags on the right. The brand mark and
+    wordmark themselves live in the sidebar (see sidebar_brand_bar()) --
+    repeating the "BEACON" title here as well read as redundant, so this
+    banner carries the acronym expansion instead."""
     import datetime
 
     now = datetime.datetime.now().strftime("%b %d, %Y &middot; %H:%M")
@@ -515,8 +528,8 @@ def header_band(subtitle: str, eyebrow: str = "CYBER COMMAND CENTER",
   <div class="bx-hero-scrim"></div>
   <div class="bx-hero-content">
     <div class="bx-eyebrow">{_esc(eyebrow)}</div>
-    <div style="margin-top:1px">{wordmark(30)}</div>
-    <div style="font-size:12px;color:#94a3b8;margin-top:4px;max-width:420px">{_esc(subtitle)}</div>
+    {_acronym_line()}
+    <div style="font-size:12.5px;color:#94a3b8;margin-top:5px;max-width:440px">{_esc(intro)}</div>
   </div>
   <div class="bx-hero-content" style="text-align:right;background:rgba(5,8,16,.55);
        padding:8px 14px;border-radius:9px;backdrop-filter:blur(2px)">
