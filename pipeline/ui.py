@@ -1,19 +1,28 @@
-"""UI layer for the BEACON dashboard — a light, product-style analyst
-console (sidebar navigation, rounded cards, icon strip), replacing the
-earlier dark SOC-console skin at the user's direction.
+"""UI layer for the BEACON dashboard — a command-console analyst UI with
+a real dark/light theme toggle (not just an OS-preference read), Material
+Symbols instead of emoji for every icon, and the BEACON mark as the brand
+mark instead of a generic glyph.
 
-Colour roles match pipeline/viz.py's LIGHT palette so the HTML components
-here and the Altair charts read as one system, not two competing palettes.
+Colour roles are duplicated per theme (LIGHT_TOKENS / DARK_TOKENS) rather
+than computed from one set, because a computed flip reliably produces bad
+contrast somewhere -- both palettes are hand-picked and internally
+consistent with pipeline/viz.py's chart palettes. Every component reads
+the ACTIVE theme via tokens()/severity_colors(), never the module-level
+dicts directly, so flipping the toggle re-themes every page in one place.
 Severity/risk always ships with an icon or dot alongside the label, so
 colour never carries the meaning alone.
 """
 from __future__ import annotations
 
+import base64
 import html
+import os
 
 import pandas as pd
 
-TOKENS = {
+_ASSET_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
+
+LIGHT_TOKENS = {
     "bg": "#f5f7fb",
     "panel": "#ffffff",
     "panel2": "#f8fafc",
@@ -25,20 +34,43 @@ TOKENS = {
     "accent_ink": "#2947b3",
     "accent_soft": "#e9eefd",
     "bar_mute": "#c7cee0",
+    "badge_bg": "#0a0e1a",  # the logo mark keeps its native dark badge in both themes
 }
 
-# Reserved status palette -- never reused for a data series.
+DARK_TOKENS = {
+    "bg": "#080b14",
+    "panel": "#111827",
+    "panel2": "#0b1120",
+    "line": "#1f2a44",
+    "ink": "#f3f6ff",
+    "ink2": "#a9b4d0",
+    "muted": "#6b7793",
+    "accent": "#22d3ee",
+    "accent_ink": "#67e8f9",
+    "accent_soft": "rgba(34,211,238,.14)",
+    "bar_mute": "#233048",
+    "badge_bg": "#0a0e1a",
+}
+
+# Reserved status palette -- never reused for a data series. Dark gets its
+# own brighter steps rather than the light palette's values, which read as
+# muddy/low-contrast against a near-black panel.
 SEVERITY = {
-    "Low": "#1f9d6f",
-    "Medium": "#c98a1c",
-    "High": "#d9642e",
-    "Critical": "#d1454b",
+    "light": {"Low": "#1f9d6f", "Medium": "#c98a1c", "High": "#d9642e", "Critical": "#d1454b"},
+    "dark": {"Low": "#34d399", "Medium": "#fbbf24", "High": "#fb923c", "Critical": "#f87171"},
 }
 SEVERITY_SOFT = {
-    "Low": "#e3f6ee",
-    "Medium": "#fbf1de",
-    "High": "#fceee4",
-    "Critical": "#fbe8e8",
+    "light": {"Low": "#e3f6ee", "Medium": "#fbf1de", "High": "#fceee4", "Critical": "#fbe8e8"},
+    "dark": {"Low": "rgba(52,211,153,.14)", "Medium": "rgba(251,191,36,.14)",
+             "High": "rgba(251,146,60,.14)", "Critical": "rgba(248,113,113,.14)"},
+}
+
+# One Material Symbol per category so the verdict card always carries an
+# icon, not colour alone -- same rule the severity chip follows.
+CATEGORY_ICON = {
+    "Benign": "check_circle", "Backdoor": "sensor_door", "Exploit": "bolt",
+    "HackTool": "build", "Hoax": "help", "Rootkit": "bug_report",
+    "Trojan": "warning", "Virus": "coronavirus", "Worm": "pest_control",
 }
 
 
@@ -59,57 +91,156 @@ def render(markup: str) -> None:
     st.html(markup)
 
 
+def current_theme_name() -> str:
+    """'dark' or 'light' -- the single source of truth every page and
+    chart call reads, so the toggle and every themed surface agree."""
+    import streamlit as st
+
+    # `.get(..., "dark")` alone isn't enough: st.segmented_control lets a
+    # single-select pill be clicked again to DESELECT it, which sets
+    # session_state["beacon_theme"] to None (a present key, not a missing
+    # one) rather than leaving the old choice in place -- `or` catches
+    # that explicit-None case the same as a never-set key.
+    return st.session_state.get("beacon_theme") or "dark"
+
+
+def tokens() -> dict:
+    return DARK_TOKENS if current_theme_name() == "dark" else LIGHT_TOKENS
+
+
+def severity_colors() -> dict:
+    return SEVERITY[current_theme_name()]
+
+
+def severity_soft() -> dict:
+    return SEVERITY_SOFT[current_theme_name()]
+
+
+def theme_toggle() -> None:
+    """Sidebar dark/light switch. Bound directly to session_state via
+    `key` so every other themed call in this same rerun (tokens(),
+    inject_theme(), the Altair charts) already sees the new choice --
+    Streamlit applies a widget's pending value before the script reruns,
+    not after this line executes."""
+    import streamlit as st
+
+    st.session_state.setdefault("beacon_theme", "dark")
+    render(nav_label("Appearance"))
+    st.segmented_control(
+        "Theme", options=["dark", "light"], format_func=str.capitalize,
+        key="beacon_theme", label_visibility="collapsed",
+    )
+
+
+def _logo_data_uri() -> str:
+    path = os.path.join(_ASSET_DIR, "logo-mark.png")
+    with open(path, "rb") as fh:
+        encoded = base64.b64encode(fh.read()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+def icon(name: str, size: int = 18, color: str | None = None) -> str:
+    """A Material Symbol as an inline span, for use inside render()'d HTML
+    (raw st.html() output bypasses Streamlit's own `:material/x:` markdown
+    shorthand, so components need this instead).
+
+    Deliberately reuses Streamlit's OWN self-hosted "Material Symbols
+    Rounded" font -- the one its native `:material/x:` icons already load
+    -- rather than importing a second icon font (Outlined) from Google
+    Fonts: that import loaded as CSS but Chromium never actually fetched
+    the variable-font file, leaving every custom icon rendering as literal
+    ligature text ("grid_view") instead of a glyph. Reusing Streamlit's
+    font sidesteps that and keeps every icon visually consistent besides."""
+    style = f"font-size:{size}px;line-height:1;vertical-align:middle"
+    if color:
+        style += f";color:{color}"
+    return f'<span class="bx-icon" style="{style}">{_esc(name)}</span>'
+
+
 def inject_theme() -> str:
-    t = TOKENS
+    t = tokens()
+    dark = current_theme_name() == "dark"
+    shadow = "0 1px 2px rgba(0,0,0,.35)" if dark else "0 1px 2px rgba(21,27,44,.04)"
     return f"""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-  /* :not(stIconMaterial) is load-bearing -- Streamlit draws its icons as
-     Material Symbols LIGATURES, so a span reading "keyboard_double_arrow_left"
-     is an arrow only while it keeps the icon font. [class*="st-"] otherwise
-     matches those spans and reflows them as that literal text. */
-  html, body, [class*="st-"]:not([data-testid="stIconMaterial"]),
+  /* [data-testid*="Icon"] (not just stIconMaterial) is load-bearing --
+     Streamlit uses several icon testids (stIconMaterial for nav/buttons,
+     stAlertDynamicIcon for st.info/warning/error, more elsewhere), all
+     rendered as Material Symbols ligatures. Missing any of them forces
+     Inter onto that span, which has no such ligature, so the icon shows
+     as literal text ("upload_file") instead of a glyph. */
+  html, body, [class*="st-"]:not([data-testid*="Icon"]):not(.bx-icon),
   .stMarkdown, button, input, textarea {{
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   }}
-  .stApp {{ background: {t['bg']}; }}
-  .block-container {{ padding-top: 1.8rem; padding-bottom: 3rem; max-width: 1400px; }}
-  h1 {{ font-size: 1.7rem !important; font-weight: 800 !important; letter-spacing: -.02em; }}
-  h2 {{ font-size: 1rem !important; font-weight: 700 !important; }}
-  h3 {{ font-size: .92rem !important; font-weight: 700 !important; }}
-  p, .stCaption {{ color: {t['ink2']}; }}
-  hr {{ border-color: {t['line']}; margin: 1.1rem 0; }}
-
-  /* ---- sidebar: brand block + native page nav + status footer ---- */
-  [data-testid="stSidebar"] {{ background: {t['panel']}; border-right: 1px solid {t['line']}; }}
-  [data-testid="stSidebarNav"] {{ padding-top: 4px; }}
-  [data-testid="stSidebarNav"] a {{
-    border-radius: 8px; margin: 1px 8px; padding: 2px 4px;
+  /* Reuses Streamlit's own self-hosted "Material Symbols Rounded" font --
+     the one its native `:material/x:` icons already load -- so custom
+     icon() spans need no font import of their own and always match. */
+  .bx-icon {{
+    font-family: "Material Symbols Rounded"; font-weight: normal; font-style: normal;
+    display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr;
+    -webkit-font-feature-settings: "liga"; font-feature-settings: "liga";
   }}
+  .stApp {{ background: {t['bg']}; }}
+  /* Safety net: Streamlit's static config.toml theme (fixed at "dark")
+     sets the page's root text colour, so any custom element rendered via
+     st.html() that doesn't set its OWN colour explicitly inherits that
+     static value -- fine while the in-app toggle is also dark, invisible
+     once toggled to light. Give st.html() output a sane themed default;
+     every component that already sets its own colour is unaffected. */
+  .stHtml {{ color: {t['ink2']}; }}
+  .block-container {{ padding-top: 1.6rem; padding-bottom: 3rem; max-width: 1400px; }}
+  h1 {{ font-size: 1.7rem !important; font-weight: 800 !important; letter-spacing: -.02em; color: {t['ink']} !important; }}
+  h2 {{ font-size: 1rem !important; font-weight: 700 !important; color: {t['ink']} !important; }}
+  h3 {{ font-size: .92rem !important; font-weight: 700 !important; color: {t['ink']} !important; }}
+  p, .stCaption, .stMarkdown p {{ color: {t['ink2']} !important; }}
+  hr {{ border-color: {t['line']}; margin: 1.1rem 0; }}
+  /* Inline code spans default to Streamlit's static config theme's code
+     styling (always dark), which clashed once toggled away from dark. */
+  code {{ background: {t['panel2']} !important; color: {t['accent_ink']} !important;
+    border-radius: 4px; }}
+  /* Global, not scoped to .bx-card: a "sub" caption appears standalone
+     inside st.container(border=True) panels too (no .bx-card ancestor
+     there), and without !important it silently fell back to Streamlit's
+     own base-theme text colour instead of the active toggle's palette. */
+  .sub {{ font-size: 12px; color: {t['muted']} !important; margin: 0 0 14px; }}
+
+  /* ---- sidebar: native page nav + status footer ---- */
+  [data-testid="stSidebar"] {{ background: {t['panel']}; border-right: 1px solid {t['line']}; }}
+  [data-testid="stSidebarNav"] {{ padding-top: 10px; }}
+  [data-testid="stSidebarNav"] a {{ border-radius: 8px; margin: 1px 8px; padding: 2px 4px; }}
   [data-testid="stSidebarNav"] a p {{ font-size: .87rem; font-weight: 500; color: {t['ink2']}; }}
+  [data-testid="stSidebarNav"] a span[data-testid="stIconMaterial"] {{ color: {t['muted']}; }}
   [data-testid="stSidebarNav"] a[aria-current="page"] {{ background: {t['accent_soft']}; }}
   [data-testid="stSidebarNav"] a[aria-current="page"] p {{ color: {t['accent_ink']}; font-weight: 600; }}
+  [data-testid="stSidebarNav"] a[aria-current="page"] span[data-testid="stIconMaterial"] {{ color: {t['accent_ink']}; }}
   [data-testid="stSidebarNav"] a:hover {{ background: {t['panel2']}; }}
 
-  .bx-brand {{ display: flex; align-items: center; gap: 10px; padding: 6px 4px 16px;
-    border-bottom: 1px solid {t['line']}; margin-bottom: 6px; }}
-  .bx-brand .name {{ font-weight: 800; font-size: 17px; letter-spacing: -.01em; color: {t['ink']}; }}
-  .bx-brand .tag {{ font-size: 10.5px; color: {t['muted']}; line-height: 1.3; margin-top: 1px; }}
   .bx-navlabel {{ font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .12em;
-    text-transform: uppercase; color: {t['muted']}; margin: 14px 10px 2px; }}
-
-  .bx-label {{
-    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
-    color: {t['muted']}; margin: 2px 0 8px;
-  }}
+    text-transform: uppercase; color: {t['muted']}; margin: 16px 10px 4px; }}
+  .bx-label {{ font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: {t['muted']}; margin: 2px 0 8px; }}
   .bx-mono {{ font-family: "IBM Plex Mono", ui-monospace, monospace; }}
+
+  /* ---- sidebar theme toggle ---- */
+  [data-testid="stSidebar"] div[data-testid="stSegmentedControl"] {{ padding: 0 8px; }}
 
   /* ---- cards ---- */
   .bx-card {{ background: {t['panel']}; border: 1px solid {t['line']}; border-radius: 12px;
-    padding: 20px; box-shadow: 0 1px 2px rgba(21,27,44,.04); }}
+    padding: 20px; box-shadow: {shadow}; }}
   .bx-card h2 {{ margin: 0 0 3px; }}
-  .bx-card .sub {{ font-size: 12px; color: {t['muted']}; margin: 0 0 14px; }}
+
+  /* Streamlit's own bordered container (st.container(border=True)), re-skinned
+     to match .bx-card so a chart/table can sit INSIDE a themed panel border --
+     raw HTML cards can't wrap native widgets, this can. */
+  [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]) {{
+    background: {t['panel']}; border: 1px solid {t['line']} !important; border-radius: 12px !important;
+    box-shadow: {shadow};
+  }}
+  [data-testid="stVerticalBlockBorderWrapper"] {{ background: {t['panel']}; border-color: {t['line']} !important;
+    border-radius: 12px !important; box-shadow: {shadow}; }}
 
   /* ---- file-upload drop zone reskin ---- */
   [data-testid="stFileUploaderDropzone"] {{
@@ -117,11 +248,19 @@ def inject_theme() -> str:
     border-radius: 10px !important;
   }}
   [data-testid="stFileUploaderDropzoneInstructions"] svg {{ display:none; }}
+  [data-testid="stFileUploaderDropzoneInstructions"] span,
+  [data-testid="stFileUploaderDropzoneInstructions"] small {{ color: {t['ink2']}; }}
+  /* the uploaded-file chip that appears after a file is picked -- also
+     unthemed by default, so it stayed dark-config-styled against a
+     light dropzone once toggled to light. */
+  [data-testid="stFileChip"] {{ background: {t['panel']} !important; border-radius: 8px; }}
+  [data-testid="stFileChip"] * {{ color: {t['ink2']} !important; }}
+  [data-testid="stFileChip"] svg {{ fill: {t['ink2']} !important; }}
 
   /* ---- verdict card ---- */
   .bx-verdict {{ display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }}
   .bx-vicon {{ width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center;
-    justify-content: center; flex: none; font-size: 21px; }}
+    justify-content: center; flex: none; }}
   .bx-verdict .lbl {{ font-size: 10.5px; color: {t['muted']}; font-weight: 700; letter-spacing: .04em; }}
   .bx-verdict .cat {{ font-size: 21px; font-weight: 800; letter-spacing: -.01em; color: {t['ink']}; }}
   .bx-meta {{ font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: {t['muted']};
@@ -138,16 +277,12 @@ def inject_theme() -> str:
 
   .bx-riskrow {{ display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: {t['ink2']};
     font-weight: 600; margin-bottom: 14px; }}
-  .bx-chip {{
-    display: inline-flex; align-items: center; gap: 6px;
+  .bx-chip {{ display: inline-flex; align-items: center; gap: 6px;
     font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 700;
-    padding: 3px 9px; border-radius: 99px;
-  }}
+    padding: 3px 9px; border-radius: 99px; }}
 
-  .bx-note {{
-    border: 1px solid {t['line']}; border-radius: 9px; padding: 12px 14px;
-    background: {t['panel2']}; font-size: 12px; color: {t['ink2']}; line-height: 1.55;
-  }}
+  .bx-note {{ border: 1px solid {t['line']}; border-radius: 9px; padding: 12px 14px;
+    background: {t['panel2']}; font-size: 12px; color: {t['ink2']}; line-height: 1.55; }}
   .bx-note strong {{ color: {t['ink']}; font-weight: 700; }}
 
   /* ---- feature / stat strip (icon tiles) ---- */
@@ -156,21 +291,21 @@ def inject_theme() -> str:
   .bx-stat {{ background: {t['panel']}; border: 1px solid {t['line']}; border-radius: 12px;
     padding: 15px 16px; display: flex; gap: 12px; align-items: flex-start; }}
   .bx-stat .ic {{ width: 36px; height: 36px; border-radius: 9px; background: {t['accent_soft']};
-    color: {t['accent_ink']}; display: flex; align-items: center; justify-content: center;
-    flex: none; font-size: 17px; }}
+    color: {t['accent_ink']}; display: flex; align-items: center; justify-content: center; flex: none; }}
   .bx-stat .t {{ font-weight: 700; font-size: 13.5px; color: {t['ink']}; margin-bottom: 2px; }}
   .bx-stat .d {{ font-size: 11.5px; color: {t['muted']}; line-height: 1.4; }}
 
-  /* ---- numeric run-stats (small KPI grid) ---- */
-  .bx-kpis {{
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  /* ---- numeric run-stats (KPI grid), optionally with a leading icon ---- */
+  .bx-kpis {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 1px; background: {t['line']}; border: 1px solid {t['line']};
-    border-radius: 10px; overflow: hidden; margin-bottom: 4px;
-  }}
-  .bx-kpi {{ background: {t['panel']}; padding: 12px 14px; }}
+    border-radius: 10px; overflow: hidden; margin-bottom: 4px; }}
+  .bx-kpi {{ background: {t['panel']}; padding: 14px 16px; }}
+  .bx-kpi .ic {{ width: 30px; height: 30px; border-radius: 8px; background: {t['accent_soft']};
+    color: {t['accent_ink']}; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }}
   .bx-kpi .k {{ font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: {t['muted']}; margin-bottom: 4px; }}
-  .bx-kpi .v {{ font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; color: {t['ink']}; letter-spacing: -.01em; }}
+  .bx-kpi .v {{ font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; color: {t['ink']}; letter-spacing: -.01em; }}
   .bx-kpi .s {{ font-family: "IBM Plex Mono", monospace; font-size: 10px; color: {t['muted']}; margin-top: 3px; }}
+  .bx-kpi .s.ok {{ color: {SEVERITY[current_theme_name()]['Low']}; }}
 
   /* ---- ranked probability bars ---- */
   .bx-prob {{ display: grid; grid-template-columns: 76px minmax(0,1fr) 44px; align-items: center; gap: 10px; padding: 3px 0; }}
@@ -178,22 +313,17 @@ def inject_theme() -> str:
   .bx-prob.top .n {{ color: {t['accent_ink']}; font-weight: 700; }}
   .bx-prob .ptrack {{ display: block; height: 10px; background: {t['panel2']}; border: 1px solid {t['line']};
     border-radius: 5px; overflow: hidden; }}
-  /* display:block is load-bearing -- these are spans, and an inline element
-     ignores width/height outright (the bar renders 0x0 without it). */
   .bx-prob .pfill {{ display: block; height: 100%; min-width: 3px; background: {t['bar_mute']}; border-radius: 0 4px 4px 0; }}
   .bx-prob.top .pfill {{ background: {t['accent']}; }}
-  .bx-prob .p {{
-    font-family: "IBM Plex Mono", monospace; font-size: 11px; color: {t['muted']};
-    font-variant-numeric: tabular-nums; text-align: right;
-  }}
+  .bx-prob .p {{ font-family: "IBM Plex Mono", monospace; font-size: 11px; color: {t['muted']};
+    font-variant-numeric: tabular-nums; text-align: right; }}
   .bx-prob.top .p {{ color: {t['ink']}; font-weight: 600; }}
 
   /* ---- model status cards ---- */
   .bx-streamcard {{ display: flex; align-items: flex-start; gap: 11px; padding: 13px;
     border-radius: 10px; border: 1px solid {t['line']}; margin-bottom: 10px; }}
   .bx-streamcard .ic {{ width: 34px; height: 34px; border-radius: 8px; background: {t['accent_soft']};
-    color: {t['accent_ink']}; display: flex; align-items: center; justify-content: center;
-    flex: none; font-size: 16px; }}
+    color: {t['accent_ink']}; display: flex; align-items: center; justify-content: center; flex: none; }}
   .bx-streamcard .top {{ display: flex; justify-content: space-between; align-items: center; gap: 8px; }}
   .bx-streamcard .t {{ font-weight: 700; font-size: 13px; color: {t['ink']}; }}
   .bx-streamcard .d {{ font-size: 11.3px; color: {t['muted']}; margin-top: 2px; line-height: 1.4; }}
@@ -207,11 +337,9 @@ def inject_theme() -> str:
   /* ---- detections log ---- */
   .bx-tablewrap {{ overflow-x: auto; border: 1px solid {t['line']}; border-radius: 10px; }}
   table.bx-log {{ width: 100%; border-collapse: collapse; min-width: 680px; background: {t['panel']}; }}
-  table.bx-log thead th {{
-    text-align: left; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  table.bx-log thead th {{ text-align: left; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
     color: {t['muted']}; font-weight: 600; padding: 9px 13px; white-space: nowrap;
-    border-bottom: 1px solid {t['line']}; background: {t['panel2']};
-  }}
+    border-bottom: 1px solid {t['line']}; background: {t['panel2']}; }}
   table.bx-log td {{ padding: 9px 13px; border-bottom: 1px solid {t['line']}; font-size: 12px; color: {t['ink2']}; }}
   table.bx-log tr:last-child td {{ border-bottom: 0; }}
   table.bx-log td.m {{ font-family: "IBM Plex Mono", monospace; font-size: 11px; color: {t['muted']}; font-variant-numeric: tabular-nums; }}
@@ -219,51 +347,106 @@ def inject_theme() -> str:
   .bx-sev {{ display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; }}
   .bx-sev i {{ width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }}
 
-  @media (max-width: 720px) {{
-    .bx-verdict {{ flex-wrap: wrap; }}
-  }}
+  /* ---- confidence ring ---- */
+  .bx-ring-wrap {{ display: flex; flex-direction: column; align-items: center; gap: 6px; }}
+  .bx-ring {{ width: 108px; height: 108px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; position: relative; }}
+  .bx-ring::before {{ content: ""; position: absolute; inset: 10px; border-radius: 50%; background: {t['panel']}; }}
+  .bx-ring .v {{ position: relative; font-size: 21px; font-weight: 800; color: {t['ink']}; letter-spacing: -.01em; }}
+  .bx-ring-label {{ font-size: 10.5px; color: {t['muted']}; font-weight: 600; }}
+
+  /* ---- SHAP ranked table ---- */
+  .bx-shaptable {{ width: 100%; border-collapse: collapse; }}
+  .bx-shaptable th {{ text-align: left; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+    color: {t['muted']}; font-weight: 600; padding: 0 0 8px; }}
+  .bx-shaptable td {{ padding: 7px 0; border-top: 1px solid {t['line']}; font-size: 12.5px; color: {t['ink2']}; vertical-align: middle; }}
+  .bx-shaptable td.rank {{ color: {t['muted']}; font-family: "IBM Plex Mono", monospace; width: 22px; }}
+  .bx-shaptable td.feat {{ color: {t['ink']}; font-weight: 600; }}
+  .bx-shaptable td.bar {{ width: 42%; }}
+  .bx-shapbar-track {{ height: 8px; border-radius: 4px; background: {t['panel2']}; overflow: hidden; display: flex; }}
+  .bx-shapbar-fill {{ display: block; height: 100%; border-radius: 4px; }}
+  .bx-shaptable td.val {{ font-family: "IBM Plex Mono", monospace; text-align: right; white-space: nowrap; }}
+
+  /* ---- analysis workflow stepper ---- */
+  .bx-steps {{ display: flex; align-items: flex-start; gap: 4px; }}
+  .bx-step {{ flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center;
+    position: relative; padding-top: 4px; }}
+  .bx-step .num {{ width: 30px; height: 30px; border-radius: 50%; background: {t['accent_soft']};
+    color: {t['accent_ink']}; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; margin-bottom: 8px; }}
+  .bx-step .t {{ font-size: 12.5px; font-weight: 700; color: {t['ink']}; }}
+  .bx-step .d {{ font-size: 10.5px; color: {t['muted']}; margin-top: 2px; }}
+  .bx-step::before {{ content: ""; position: absolute; top: 19px; left: -50%; width: 100%; height: 1px;
+    background: {t['line']}; z-index: 0; }}
+  .bx-step:first-child::before {{ display: none; }}
+
+  /* ---- header band ---- */
+  .bx-headband {{ display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    padding: 4px 2px 18px; border-bottom: 1px solid {t['line']}; margin-bottom: 18px; flex-wrap: wrap; }}
+  .bx-brandmark {{ width: 46px; height: 46px; border-radius: 11px; background: {t['badge_bg']};
+    display: flex; align-items: center; justify-content: center; flex: none; overflow: hidden; }}
+  .bx-brandmark img {{ width: 34px; height: 34px; object-fit: contain; }}
+  .bx-eyebrow {{ font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .16em;
+    color: {t['accent_ink']}; text-transform: uppercase; margin-bottom: 2px; }}
+
+  @media (max-width: 720px) {{ .bx-verdict {{ flex-wrap: wrap; }} }}
 </style>
 """
 
 
-LIGHTHOUSE_SVG = """<svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-  <path d="M9 21V9.5L12 3l3 6.5V21" stroke="#3d63e0" stroke-width="1.6" stroke-linejoin="round"/>
-  <path d="M6 21h12M10 13h4M9.5 17h5" stroke="#3d63e0" stroke-width="1.6" stroke-linecap="round"/>
-  <circle cx="12" cy="6.4" r="1.15" fill="#3d63e0"/>
-</svg>"""
-
-
 def sidebar_brand() -> str:
-    return (f'<div class="bx-brand">{LIGHTHOUSE_SVG}<div>'
-            f'<div class="name">BEACON</div>'
+    """Kept for backward compatibility; the header band (header_band()) is
+    what actually renders the brand now, since st.navigation()'s menu
+    renders at a fixed position at the top of the sidebar no matter where
+    a brand block is placed within it."""
+    return (f'<div class="bx-brand"><div class="bx-brandmark">'
+            f'<img src="{_logo_data_uri()}" alt="BEACON"></div>'
+            f'<div><div class="name">BEACON</div>'
             f'<div class="tag">Explainable malware<br>detection</div></div></div>')
 
 
-def top_bar() -> str:
-    """Full-width brand bar above the page content.
+def header_band(subtitle: str, eyebrow: str = "CYBER COMMAND CENTER",
+                tags: str = "OBSERVE &middot; ANALYZE &middot; EXPLAIN &middot; DEFEND") -> str:
+    """Full-width header above the page content: brand mark + title + tagline
+    on the left, live status tags on the right. Lives in the MAIN area, not
+    the sidebar -- st.navigation()'s menu always renders at the very top of
+    the sidebar regardless of where a brand block is placed within it, so a
+    sidebar-based brand mark ends up below the nav rather than above it."""
+    import datetime
 
-    st.navigation()'s sidebar menu renders at a fixed position -- the very
-    top of the sidebar -- no matter where in the script st.navigation() or
-    surrounding st.sidebar blocks are called, so a brand block placed in
-    the sidebar always ends up BELOW the nav rather than above it. Putting
-    the brand here instead sidesteps that constraint entirely, and is
-    closer to the reference layout anyway: brand and section nav were two
-    separate stacked bars there, not one nested inside the other."""
+    t = tokens()
+    now = datetime.datetime.now().strftime("%b %d, %Y &middot; %H:%M")
     return f"""
-<div style="display:flex;align-items:center;justify-content:space-between;
-     padding:2px 2px 18px;border-bottom:1px solid {TOKENS['line']};margin-bottom:18px">
-  <div style="display:flex;align-items:center;gap:11px">
-    {LIGHTHOUSE_SVG}
+<div class="bx-headband">
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="bx-brandmark"><img src="{_logo_data_uri()}" alt="BEACON"></div>
     <div>
-      <div style="font-weight:800;font-size:19px;letter-spacing:-.01em;color:{TOKENS['ink']}">BEACON</div>
-      <div style="font-size:11px;color:{TOKENS['muted']}">Explainable malware detection from
-        network-flow and memory-forensic telemetry</div>
+      <div class="bx-eyebrow">{_esc(eyebrow)}</div>
+      <div style="font-weight:800;font-size:22px;letter-spacing:-.01em;color:{t['ink']}">BEACON</div>
+      <div style="font-size:11.5px;color:{t['muted']};margin-top:1px">{_esc(subtitle)}</div>
     </div>
   </div>
-  <div class="bx-mono" style="font-size:10.5px;letter-spacing:.14em;color:{TOKENS['muted']};
-       text-transform:uppercase;white-space:nowrap">DETECT &middot; EXPLAIN &middot; SAFER SYSTEMS</div>
+  <div style="text-align:right">
+    <div class="bx-mono" style="font-size:10px;letter-spacing:.14em;color:{t['muted']};
+         text-transform:uppercase;white-space:nowrap;margin-bottom:6px">{tags}</div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:14px">
+      <span class="bx-mono" style="font-size:11.5px;color:{t['ink2']}">{now}</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;
+            font-weight:600;color:{SEVERITY[current_theme_name()]['Low']}">
+        <i style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block"></i>
+        System Online
+      </span>
+    </div>
+  </div>
 </div>
 """
+
+
+def top_bar() -> str:
+    """Deprecated alias for header_band(), kept so any remaining call site
+    doesn't break; new code should call header_band() directly."""
+    return header_band("Explainable malware detection from network-flow "
+                        "and memory-forensic telemetry")
 
 
 def nav_label(text: str) -> str:
@@ -271,27 +454,20 @@ def nav_label(text: str) -> str:
 
 
 def severity_chip(severity: str) -> str:
-    colour = SEVERITY.get(severity, TOKENS["muted"])
-    soft = SEVERITY_SOFT.get(severity, TOKENS["panel2"])
+    colour = severity_colors().get(severity, tokens()["muted"])
+    soft = severity_soft().get(severity, tokens()["panel2"])
     return (f'<span class="bx-chip" style="color:{colour};background:{soft}">'
             f'● {_esc(severity)}</span>')
 
 
-# One glyph per category so the verdict card always carries an icon, not
-# colour alone -- same rule the severity chip follows.
-CATEGORY_ICON = {
-    "Benign": "✓", "Backdoor": "🛡", "Exploit": "⚡", "HackTool": "🔧",
-    "Hoax": "◐", "Rootkit": "☠", "Trojan": "🐴", "Virus": "🦠", "Worm": "➰",
-}
-
-
 def verdict_card(verdict: str, severity: str, confidence: float, meta: str,
                  threshold: float = 0.60, example: bool = False) -> str:
-    colour = SEVERITY.get(severity, TOKENS["accent"])
-    soft = SEVERITY_SOFT.get(severity, TOKENS["accent_soft"])
-    icon = CATEGORY_ICON.get(verdict, "●")
-    badge = ('<span class="bx-chip" style="background:{s};color:{c}">LABELLED EXAMPLE</span>'
-             .format(s=TOKENS["accent_soft"], c=TOKENS["accent_ink"])) if example else ""
+    t = tokens()
+    colour = severity_colors().get(severity, t["accent"])
+    soft = severity_soft().get(severity, t["accent_soft"])
+    ic = icon(CATEGORY_ICON.get(verdict, "help"), size=21, color=colour)
+    badge = (f'<span class="bx-chip" style="background:{t["accent_soft"]};color:{t["accent_ink"]}">'
+             f'LABELLED EXAMPLE</span>') if example else ""
     return f"""
 <div class="bx-card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
@@ -299,7 +475,7 @@ def verdict_card(verdict: str, severity: str, confidence: float, meta: str,
   </div>
   <div style="height:10px"></div>
   <div class="bx-verdict">
-    <div class="bx-vicon" style="background:{soft};color:{colour}">{icon}</div>
+    <div class="bx-vicon" style="background:{soft}">{ic}</div>
     <div><div class="lbl">PREDICTED CATEGORY</div><div class="cat">{_esc(verdict)}</div></div>
   </div>
   <div class="bx-meta">{_esc(meta)}</div>
@@ -315,10 +491,66 @@ def verdict_card(verdict: str, severity: str, confidence: float, meta: str,
 """
 
 
+def confidence_ring(confidence: float, colour: str | None = None, label: str = "CONFIDENCE") -> str:
+    """A circular gauge (CSS conic-gradient) for the Dashboard's results
+    panel -- confidence is the single headline number there, so it gets a
+    stat-tile treatment rather than competing for space with a bar chart."""
+    t = tokens()
+    c = colour or t["accent"]
+    pct = max(0.0, min(1.0, confidence)) * 360
+    return f"""
+<div class="bx-ring-wrap">
+  <div class="bx-ring" style="background:conic-gradient({c} {pct}deg, {t['panel2']} {pct}deg)">
+    <span class="v">{confidence:.0%}</span>
+  </div>
+  <div class="bx-ring-label">{_esc(label)}</div>
+</div>
+"""
+
+
+def data_preview_table(df: pd.DataFrame, max_rows: int = 5, max_cols: int = 10) -> str:
+    """A themed preview table -- native st.dataframe renders via a canvas
+    widget that follows Streamlit's static config theme, not this app's
+    in-app dark/light toggle, so it looked wrong (a dark grid inside a
+    light card) as soon as the toggle left its default. Truncated to
+    max_cols since a Network capture carries 342 raw columns."""
+    t = tokens()
+    cols = list(df.columns[:max_cols])
+    truncated_cols = len(df.columns) > max_cols
+    rows = df[cols].head(max_rows)
+    head = "".join(f"<th>{_esc(c)}</th>" for c in cols)
+    if truncated_cols:
+        head += f'<th style="color:{t["muted"]}">&hellip; +{len(df.columns) - max_cols} more</th>'
+    body_rows = []
+    for _, row in rows.iterrows():
+        cells = "".join(f"<td>{_esc(row[c])}</td>" for c in cols)
+        if truncated_cols:
+            cells += "<td></td>"
+        body_rows.append(f"<tr>{cells}</tr>")
+    return (
+        f'<div class="bx-tablewrap"><table class="bx-log">'
+        f'<thead><tr>{head}</tr></thead><tbody>{"".join(body_rows)}</tbody></table></div>'
+    )
+
+
+def metrics_table(rows: list[dict], columns: list[str]) -> str:
+    """A themed table for a small results grid (e.g. the Methodology page's
+    measured-results table) -- native st.dataframe renders via a canvas
+    widget that follows Streamlit's static config theme, not this app's
+    in-app dark/light toggle, so it looked wrong there too."""
+    head = "".join(f"<th>{_esc(c)}</th>" for c in columns)
+    body = []
+    for r in rows:
+        cells = "".join(f"<td>{_esc(r[c])}</td>" for c in columns)
+        body.append(f"<tr>{cells}</tr>")
+    return (f'<div class="bx-tablewrap"><table class="bx-log">'
+            f'<thead><tr>{head}</tr></thead><tbody>{"".join(body)}</tbody></table></div>')
+
+
 def stat_strip(items: list[dict]) -> str:
-    """items: [{icon, title, desc}] -- the four feature tiles."""
+    """items: [{icon, title, desc}] -- icon is a Material Symbol name."""
     cells = "".join(
-        f'<div class="bx-stat"><div class="ic">{i["icon"]}</div>'
+        f'<div class="bx-stat"><div class="ic">{icon(i["icon"], size=18)}</div>'
         f'<div><div class="t">{_esc(i["title"])}</div><div class="d">{_esc(i["desc"])}</div></div></div>'
         for i in items
     )
@@ -326,14 +558,15 @@ def stat_strip(items: list[dict]) -> str:
 
 
 def kpi_strip(items: list[dict]) -> str:
-    cells = "".join(
-        f'<div class="bx-kpi"><div class="k">{_esc(i["label"])}</div>'
-        f'<div class="v">{_esc(i["value"])}</div>'
-        + (f'<div class="s">{_esc(i["sub"])}</div>' if i.get("sub") else "")
-        + "</div>"
-        for i in items
-    )
-    return f'<div class="bx-kpis">{cells}</div>'
+    """items: [{label, value, sub, icon (optional), ok (optional bool)}]"""
+    cells = []
+    for i in items:
+        ic = f'<div class="ic">{icon(i["icon"], size=16)}</div>' if i.get("icon") else ""
+        sub_cls = " ok" if i.get("ok") else ""
+        sub = f'<div class="s{sub_cls}">{_esc(i["sub"])}</div>' if i.get("sub") else ""
+        cells.append(f'<div class="bx-kpi">{ic}<div class="k">{_esc(i["label"])}</div>'
+                     f'<div class="v">{_esc(i["value"])}</div>{sub}</div>')
+    return f'<div class="bx-kpis">{"".join(cells)}</div>'
 
 
 def probability_bars(proba: pd.Series, verdict: str) -> str:
@@ -349,16 +582,54 @@ def probability_bars(proba: pd.Series, verdict: str) -> str:
     return "".join(rows)
 
 
-def stream_status_card(name: str, icon: str, ok: bool, detail: str) -> str:
-    chip = ('<span class="bx-chip" style="background:#e3f6ee;color:#1f9d6f">LIVE</span>' if ok
-            else '<span class="bx-chip" style="background:#fbf1de;color:#c98a1c">NOT TRAINED</span>')
-    return (f'<div class="bx-streamcard"><div class="ic">{icon}</div>'
+def shap_table(top_features: pd.DataFrame) -> str:
+    """Ranked #/feature/bar/value table -- an alternative to the diverging
+    Altair chart for panels that want a compact list-with-inline-bar look."""
+    t = tokens()
+    sev = severity_colors()
+    max_abs = top_features["shap_value"].abs().max() or 1.0
+    rows = []
+    for rank, row in enumerate(top_features.itertuples(), start=1):
+        toward = row.shap_value >= 0
+        colour = t["accent"] if toward else sev["Critical"]
+        width = abs(row.shap_value) / max_abs * 100
+        rows.append(f"""
+<tr>
+  <td class="rank">{rank}</td>
+  <td class="feat">{_esc(row.feature)}</td>
+  <td class="bar"><div class="bx-shapbar-track">
+    <span class="bx-shapbar-fill" style="width:{width:.0f}%;background:{colour}"></span>
+  </div></td>
+  <td class="val" style="color:{colour}">{row.shap_value:+.3f}</td>
+</tr>""")
+    return (f'<table class="bx-shaptable"><thead><tr><th>#</th><th>Feature</th>'
+            f'<th>Contribution</th><th>SHAP value</th></tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table>')
+
+
+def workflow_stepper(steps: list[dict]) -> str:
+    """steps: [{icon, title, desc}] -- a static 4-stage process strip
+    (Upload -> Classify -> Explain -> Export)."""
+    cells = "".join(
+        f'<div class="bx-step"><div class="num">{icon(s["icon"], size=16)}</div>'
+        f'<div class="t">{_esc(s["title"])}</div><div class="d">{_esc(s["desc"])}</div></div>'
+        for s in steps
+    )
+    return f'<div class="bx-steps">{cells}</div>'
+
+
+def stream_status_card(name: str, icon_name: str, ok: bool, detail: str) -> str:
+    t = tokens()
+    sev = severity_colors()
+    chip = (f'<span class="bx-chip" style="background:{severity_soft()["Low"]};color:{sev["Low"]}">LIVE</span>' if ok
+            else f'<span class="bx-chip" style="background:{severity_soft()["Medium"]};color:{sev["Medium"]}">NOT TRAINED</span>')
+    return (f'<div class="bx-streamcard"><div class="ic">{icon(icon_name, size=16)}</div>'
             f'<div style="flex:1"><div class="top"><span class="t">{_esc(name)}</span>{chip}</div>'
             f'<div class="d">{_esc(detail)}</div></div></div>')
 
 
 def engine_status(name: str, detail: str, ok: bool = True) -> str:
-    colour = SEVERITY["Low"] if ok else TOKENS["muted"]
+    colour = severity_colors()["Low"] if ok else tokens()["muted"]
     return (f'<div class="bx-status"><span class="dot" style="background:{colour}"></span>'
             f'<div><div class="nm">{_esc(name)}</div><div class="mt">{_esc(detail)}</div></div></div>')
 
@@ -381,9 +652,10 @@ def detections_table(rows: list[dict]) -> str:
     if not rows:
         return ('<div class="bx-note">No detections yet this session. '
                 "Classify a capture and it will be listed here.</div>")
+    sev = severity_colors()
     body = []
     for r in rows:
-        colour = SEVERITY.get(r["severity"], TOKENS["muted"])
+        colour = sev.get(r["severity"], tokens()["muted"])
         body.append(
             f'<tr><td class="m">{_esc(r["time"])}</td>'
             f'<td class="h">{_esc(r["sample"])}</td>'

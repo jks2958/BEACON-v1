@@ -1,4 +1,7 @@
-"""Dashboard — the single "analyse anything" screen.
+"""Dashboard — the single "analyse anything" screen, laid out as a command
+console: KPI strip, an analyse/result panel pair, then class-probability
+and SHAP panels, a raw-data preview, and the upload-classify-explain-export
+workflow strip.
 
 BEACON has two models expecting different CSV schemas (342 Network
 columns vs 94 Memory columns), so there is no reliable way to auto-detect
@@ -10,9 +13,10 @@ import pandas as pd
 import streamlit as st
 
 from pipeline.controller import DashboardController, StreamUnavailable, risk_level
-from pipeline.ui import (detections_table, probability_bars, record_detection, render,
-                         sidebar_footer, stat_strip, stream_status_card, verdict_card)
-from pipeline.viz import headline, load_metrics, shap_contribution_chart
+from pipeline.ui import (confidence_ring, data_preview_table, detections_table, kpi_strip,
+                         probability_bars, record_detection, render, severity_chip,
+                         severity_colors, shap_table, sidebar_footer, tokens, workflow_stepper)
+from pipeline.viz import headline, load_metrics
 
 net_metrics, mem_metrics = load_metrics("network"), load_metrics("memory")
 
@@ -25,11 +29,28 @@ def _load_controller(stream: str) -> DashboardController | None:
         return None
 
 
+net_head = headline(net_metrics, "sample") if net_metrics and "sample_level" in net_metrics else None
+mem_head = headline(mem_metrics) if mem_metrics else None
+models_ready = sum(1 for h in (net_head, mem_head) if h)
+
 st.markdown("# Analyse. Explain. Decide.")
 st.caption("Upload network-flow or memory-forensic telemetry. BEACON classifies the sample "
            "into one of nine malware categories or benign, and shows exactly which "
            "behaviours drove the call.")
 
+render(kpi_strip([
+    {"icon": "grid_view", "label": "Malware categories", "value": "9",
+     "sub": "Known malware families"},
+    {"icon": "swap_horiz", "label": "Behavioral streams", "value": "2",
+     "sub": "Memory + Network"},
+    {"icon": "layers", "label": "Model stack", "value": "XGBoost + SHAP",
+     "sub": "Tree-based ML with explainability"},
+    {"icon": "verified", "label": "Models ready", "value": f"{models_ready}/2",
+     "sub": "Ready for inference" if models_ready == 2 else "Awaiting training data",
+     "ok": models_ready == 2},
+]))
+
+st.markdown("")
 left, right = st.columns([1.35, 1], gap="medium")
 
 with left:
@@ -44,7 +65,8 @@ with left:
     if controller is None:
         st.warning(f"No trained {stream} model is available. Run "
                    f"`python scripts/train_{stream}.py` first — this page picks it up "
-                   f"automatically once `models/{stream}_classifier.joblib` exists.", icon="🚧")
+                   f"automatically once `models/{stream}_classifier.joblib` exists.",
+                   icon=":material/construction:")
         uploaded = None
     else:
         label = ("Network flow CSV · 342 columns expected" if stream == "network"
@@ -55,6 +77,7 @@ with left:
 
 result = None
 error = None
+df = None
 if controller is not None and uploaded is not None:
     try:
         df = controller.handle_upload(uploaded)
@@ -83,52 +106,63 @@ with right:
         record_detection(st.session_state, sample=uploaded.name, stream=stream,
                          verdict=verdict, confidence=confidence, severity=severity,
                          rows=result["n_rows"])
-        render(verdict_card(
-            verdict, severity, confidence,
-            f"{uploaded.name} · {result['n_rows']:,} {unit} · {stream}_classifier.joblib"))
+        sev_colour = severity_colors().get(severity)
+        render(f"""
+<div class="bx-card">
+  <h2 style="margin-bottom:2px">Result</h2>
+  <div class="sub">{uploaded.name} · {result['n_rows']:,} {unit} · {stream}_classifier.joblib</div>
+  <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+    {confidence_ring(confidence, colour=sev_colour)}
+    <div style="flex:1;min-width:140px">
+      <div class="bx-label" style="margin-bottom:2px">Predicted malware category</div>
+      <div style="font-size:22px;font-weight:800;color:{tokens()['ink']}">{verdict}</div>
+      <div class="bx-riskrow" style="margin-top:10px">Risk level: {severity_chip(severity)}</div>
+    </div>
+  </div>
+</div>
+""")
 
 st.markdown("")
-render(stat_strip([
-    {"icon": "▦", "title": "9 malware families", "desc":
-        "Backdoor, Exploit, HackTool, Hoax, Rootkit, Trojan, Virus, Worm + Benign"},
-    {"icon": "⇄", "title": "2 evidence streams", "desc":
-        "Network flow (342 features) & memory forensics (94 features)"},
-    {"icon": "◈", "title": "XGBoost + SHAP", "desc": "Explained predictions, not black-box labels"},
-    {"icon": "⌂", "title": "Local processing", "desc": "Runs on your machine — nothing leaves it"},
-]))
-
-st.markdown("")
-c1, c2, c3 = st.columns([1, 1.15, 0.95], gap="medium")
+c1, c2 = st.columns([1, 1.1], gap="medium")
 
 with c1:
-    render('<div class="bx-card" style="height:100%"><h2>Class probabilities</h2>'
-           '<div class="sub">Mean across the capture\'s rows</div></div>')
-    if result is not None:
-        st.markdown("")
-        render(probability_bars(result["aggregate_probabilities"], result["verdict"]))
+    with st.container(border=True):
+        render('<h2>Class probabilities</h2><div class="sub">Mean across the capture\'s rows</div>')
+        if result is not None:
+            render(probability_bars(result["aggregate_probabilities"], result["verdict"]))
+        else:
+            st.caption("Results appear here once a capture is classified.")
 
 with c2:
-    render('<div class="bx-card" style="height:100%"><h2>SHAP explanation</h2>'
-           '<div class="sub">Top features that contributed to this prediction</div></div>')
-    if result is not None:
-        st.markdown("")
-        st.altair_chart(shap_contribution_chart(result["top_features"], "light"),
-                        use_container_width=True)
+    with st.container(border=True):
+        render('<h2>Top contributing features (SHAP)</h2>'
+               '<div class="sub">Ranked by absolute contribution to the verdict</div>')
+        if result is not None:
+            render(shap_table(result["top_features"]))
+        else:
+            st.caption("The SHAP breakdown appears here once a capture is classified.")
+
+st.markdown("")
+c3, c4 = st.columns([1.3, 1], gap="medium")
 
 with c3:
-    render('<div class="bx-card" style="height:100%"><h2>Model status</h2>'
-           '<div class="sub">Both detection streams</div></div>')
-    st.markdown("")
-    net_head = headline(net_metrics, "sample") if net_metrics and "sample_level" in net_metrics else None
-    mem_head = headline(mem_metrics) if mem_metrics else None
-    render(stream_status_card(
-        "Network stream", "🌐", bool(net_head),
-        f"{net_head['accuracy']:.1%} per capture (n={net_head['n']:,})" if net_head
-        else "not trained yet"))
-    render(stream_status_card(
-        "Memory stream", "🧠", bool(mem_head),
-        f"{mem_head['accuracy']:.1%} accuracy (n={mem_head['n']:,})" if mem_head
-        else "not trained yet"))
+    with st.container(border=True):
+        render('<h2>Data preview (first 5 rows)</h2>'
+               '<div class="sub">Post-validation upload, before preprocessing</div>')
+        if df is not None:
+            render(data_preview_table(df))
+        else:
+            st.caption("The uploaded capture's raw rows appear here.")
+
+with c4:
+    with st.container(border=True):
+        render('<h2>Analysis workflow</h2><div class="sub">From raw behaviour to actionable insight</div>')
+        render(workflow_stepper([
+            {"icon": "upload_file", "title": "Upload", "desc": "Feature CSV"},
+            {"icon": "bolt", "title": "Classify", "desc": "XGBoost inference"},
+            {"icon": "insights", "title": "Explain", "desc": "SHAP analysis"},
+            {"icon": "download", "title": "Export", "desc": "Results & report"},
+        ]))
 
 if result is not None:
     st.markdown("")

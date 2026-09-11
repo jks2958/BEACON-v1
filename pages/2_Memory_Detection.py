@@ -3,8 +3,8 @@ import pandas as pd
 import streamlit as st
 
 from pipeline.controller import DashboardController, StreamUnavailable, risk_level
-from pipeline.ui import (detections_table, kpi_strip, probability_bars, record_detection,
-                         render, sidebar_footer, verdict_card)
+from pipeline.ui import (current_theme_name, detections_table, kpi_strip, probability_bars,
+                         record_detection, render, sidebar_footer, verdict_card)
 from pipeline.viz import headline, load_metrics, shap_contribution_chart
 
 
@@ -37,7 +37,8 @@ uploaded = st.file_uploader("Memory-dump feature CSV", type="csv",
 
 if uploaded is None:
     st.info("Upload a memory-dump feature CSV to run a classification. Any file from "
-            "`data/raw/MemoryCSVs/<Category>/` works as a test sample.", icon="⬆️")
+            "`data/raw/MemoryCSVs/<Category>/` works as a test sample.",
+            icon=":material/upload_file:")
     render('<div class="bx-label" style="margin-top:22px">Detections this session</div>')
     render(detections_table(st.session_state.get("detections", [])))
     st.stop()
@@ -91,14 +92,14 @@ with summary_tab:
         render(probability_bars(result["aggregate_probabilities"], verdict))
     with right:
         render('<div class="bx-label">Top contributing features</div>')
-        st.altair_chart(shap_contribution_chart(result["top_features"], "light"),
+        st.altair_chart(shap_contribution_chart(result["top_features"], current_theme_name()),
                         use_container_width=True)
 
 with explain_tab:
     st.markdown("Blue pushes the verdict toward **{}**; red pushes away. Values are "
                 "SHAP contributions relative to the model's base rate."
                 .format(verdict))
-    st.altair_chart(shap_contribution_chart(result["top_features"], "light"),
+    st.altair_chart(shap_contribution_chart(result["top_features"], current_theme_name()),
                     use_container_width=True)
 
 with raw_tab:
