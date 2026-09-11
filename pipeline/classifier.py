@@ -1,4 +1,4 @@
-"""XGBoost-based classifiers for BEACON's two behavioral streams.
+"""XGBoost-based classifiers for BEACON's behavioral streams.
 
 NetworkClassifier and MemoryClassifier are structurally identical — same
 training interface, same underlying algorithm — and differ only in which
@@ -71,3 +71,14 @@ class NetworkClassifier(MalwareClassifier):
 
 class MemoryClassifier(MalwareClassifier):
     stream_name = "memory"
+
+
+class MalMemSpecialistClassifier(MalwareClassifier):
+    """A deliberately separate third model, trained on an external memory-
+    forensics dataset (CIC-MalMem-2022) that shares neither BCCC's category
+    taxonomy nor its feature schema. It is NOT merged into MemoryClassifier
+    and is not wired into the main dashboard — see
+    scripts/train_malmem_specialist.py for why merging the two would be
+    silently wrong (different malware families, different Volatility
+    feature-extraction tool, no per-sample grouping column)."""
+    stream_name = "malmem_specialist"

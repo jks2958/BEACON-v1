@@ -15,7 +15,7 @@ literature review, and requirements are in `P1 Report.pdf`.
 | **Network-stream model** | ✅ **Trained on the real dataset** — 99.1% per capture, 68.2% per flow |
 | SHAP explainability | ✅ Working, wired into both streams |
 | Streamlit dashboard | ✅ Functional for both streams |
-| Test suite (`tests/`) | ✅ 88 tests, no raw dataset required |
+| Test suite (`tests/`) | ✅ 93 tests, no raw dataset required |
 | Original `.ipynb` notebooks | Kept as-is except two bug fixes (see below); they're exploratory, not the pipeline this app runs on |
 
 Both streams' numbers are real, not illustrative — measured on held-out,
@@ -176,6 +176,65 @@ the memory features and splitting by cluster rather than by sample.
 It writes only `models/fusion_metrics.json`; the shipped models are left
 untouched.
 
+## An external-dataset specialist — CIC-MalMem-2022
+
+The Memory stream's 59.2% is a measured ceiling, not a tuning gap (see
+above), so the honest way to push it further is more or different
+*information*, not more tuning. The one real candidate for that is a
+completely external memory-forensics dataset — but it turns out none of
+the public ones actually plug into BCCC's model. `scripts/train_
+malmem_specialist.py` trains a **separate third model** on
+[CIC-MalMem-2022](https://www.unb.ca/cic/datasets/malmem-2022.html) (UNB)
+to make that concrete, rather than leave it as an assumption.
+
+**Why separate, not merged:**
+
+- **Different taxonomy.** This dataset's malware side is Ransomware /
+  Spyware / Trojan Horse (15 families). BEACON's Memory stream classifies
+  Backdoor / Exploit / HackTool / Hoax / Rootkit / Trojan / Virus / Worm.
+  Only "Trojan" overlaps by name, and even that names a different set of
+  specific families. There is **no Exploit category here at all** — the
+  one class this project is weakest on — so this dataset cannot patch
+  that gap even in principle.
+- **Different features.** This dataset's ~55 columns come from
+  VolMemLyzer; BCCC's ~98 come straight out of raw Volatility plugin
+  output. Different tool, different column names. Concatenating the two
+  CSVs would silently train on nonsense (columns aligned by position, not
+  by meaning).
+- **No sample-grouping column.** BCCC's memory rows carry a `sample_id`
+  used for a grouped split (and even that has a real caveat — see
+  §5.5.3 of the design doc). This dataset is one row per sample with no
+  such column, so a plain stratified split is used instead.
+
+So this is a genuinely new, third model — its own taxonomy, its own
+features, its own split strategy, its own metrics file — not a way to
+raise the 59.2%.
+
+```bash
+mkdir -p data/raw/CIC-MalMem-2022
+# download the CSV yourself -- this sandbox's egress proxy blocks
+# kaggle.com, unb.ca, and ieee-dataport.org alike:
+#   https://www.kaggle.com/datasets/luccagodoy/obfuscated-malware-memory-2022-cic
+#   https://www.unb.ca/cic/datasets/malmem-2022.html
+# place the CSV under data/raw/CIC-MalMem-2022/, then:
+.venv/bin/python scripts/train_malmem_specialist.py
+```
+
+The script has never been run against the real file — this sandbox
+cannot download it — so it auto-detects the label/feature columns and
+prints the full schema before training, rather than assuming public
+documentation matches the actual CSV byte-for-byte. It fails loudly with
+a clear message if the columns it expects (`Category`, `Class`) aren't
+there, instead of guessing. `tests/test_malmem_specialist.py` proves the
+mechanics — schema detection, family-label collapsing, the binary/
+multiclass objective switch, artifact saving — against a fabricated CSV
+shaped like the dataset's public documentation, since the real one isn't
+available to test against yet.
+
+It writes only `models/malmem_specialist_*`; nothing under
+`models/memory_*` changes, and this model is **not** wired into the
+Streamlit dashboard.
+
 ## Tests
 
 ```bash
@@ -183,7 +242,7 @@ untouched.
 .venv/bin/python -m pytest
 ```
 
-88 tests, ~13 seconds, and they need no raw data: the trained artifacts are
+93 tests, ~30 seconds, and they need no raw data: the trained artifacts are
 committed, so model-backed tests synthesise inputs from each model's own
 recorded feature list. Tests that need an artifact skip cleanly if it is
 absent rather than failing.
@@ -216,7 +275,8 @@ metrics reporting for both file shapes.
 pipeline/           Shared, reusable pipeline code (training + inference)
   common.py         Preprocessor (Steps 1-8)
   resampling.py      SmoteResampler, ClusterBasedResampler
-  classifier.py      MalwareClassifier, NetworkClassifier, MemoryClassifier
+  classifier.py      MalwareClassifier, NetworkClassifier, MemoryClassifier,
+                     MalMemSpecialistClassifier
   explain.py         SHAP TreeExplainer wrapper
   artifacts.py       ArtifactStore (save/load model + preprocessing bundle)
   controller.py       DashboardController used by the Streamlit pages
@@ -226,7 +286,8 @@ scripts/
   train_memory.py     End-to-end training run (Memory stream)
   train_network.py    End-to-end training run (Network stream)
   train_fusion.py     Dual-stream fusion experiment (negative result)
-tests/                pytest suite (88 tests, no raw data required)
+  train_malmem_specialist.py  Separate 3rd model, external dataset
+tests/                pytest suite (93 tests, no raw data required)
 app.py                Streamlit landing page
 pages/                Network Detection / Memory Detection / About pages
 models/               Trained models + preprocessing artifacts + metrics (both streams)
