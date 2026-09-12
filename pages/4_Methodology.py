@@ -94,6 +94,22 @@ st.markdown(
   40-43% of their training rows to the filter, and the net effect on the
   full test set was worse, not better (68.3% to 66.8% per-flow accuracy).
   The shipped model keeps the unfiltered training data.
+- **Adding per-capture context to each flow helped, but not for free.**
+  Since every flow is judged in isolation, we tried giving each one
+  features describing its own capture: same-destination "beaconing"
+  frequency, a local rolling-window deviation, and per-capture z-scores.
+  This genuinely raised per-flow accuracy by +2.08 points (68.4% to
+  70.5%) — the largest real gain of anything tried — but cost -0.67
+  points of per-capture accuracy (99.3% to 98.7%), because features
+  shared across many flows in one capture make those flows' errors move
+  together instead of cancelling out on average. A tenth feature (total
+  flows per capture) pushed the per-flow gain to +3.71 points, but
+  Virus captures average 718 flows against 140-275 for every other
+  class — a swing large enough that we can't rule out it's a dataset
+  collection artifact rather than real virus behaviour, so it wasn't
+  used. Net verdict: a validated research direction, not a drop-in
+  replacement for the shipped model, since it trades away some of the
+  metric the product actually reports.
 - **Exploit on the Memory stream is ~90% synthetic.** Only 80 real training
   samples exist, so its per-class figures are lower-confidence than the
   other eight. The Network stream has no such problem (250 real captures).
