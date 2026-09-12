@@ -138,28 +138,36 @@ st.write(
     "taxonomy by trying several and keeping the best score is test-set "
     "overfitting, not a finding."
 )
+st.write(
+    "All figures below group by `category/stem` rather than the bare filename "
+    "stem the shipped model uses. The bare stem collides — 2,155 of 5,728 "
+    "stems (37.6%) occur under more than one category — so grouping by it "
+    "merges unrelated samples and reports optimistically (see §5.5.3 of the "
+    "design specification). These numbers are therefore slightly lower than, "
+    "and not directly comparable to, the 59.2% headline above."
+)
 
 render(metrics_table(
     [
-        {"Framing": "9 classes (as shipped)", "Classes": "9", "Accuracy": "58.3%",
-         "Balanced acc": "53.6%", "Macro F1": "0.542", "Trivial baseline": "13.5%"},
-        {"Framing": "Binary (Benign vs Malware)", "Classes": "2", "Accuracy": "86.3%",
-         "Balanced acc": "69.3%", "Macro F1": "0.688", "Trivial baseline": "87.7%"},
-        {"Framing": "Behavioural super-classes", "Classes": "6", "Accuracy": "63.5%",
-         "Balanced acc": "65.7%", "Macro F1": "0.653", "Trivial baseline": "25.8%"},
-        {"Framing": "Exploit class excluded", "Classes": "8", "Accuracy": "59.1%",
-         "Balanced acc": "59.2%", "Macro F1": "0.591", "Trivial baseline": "13.6%"},
+        {"Framing": "9 classes (as shipped)", "Classes": "9", "Accuracy": "57.9%",
+         "Balanced acc": "53.7%", "Macro F1": "0.544", "Trivial baseline": "13.5%"},
+        {"Framing": "Binary (Benign vs Malware)", "Classes": "2", "Accuracy": "86.7%",
+         "Balanced acc": "67.0%", "Macro F1": "0.677", "Trivial baseline": "87.7%"},
+        {"Framing": "Behavioural super-classes", "Classes": "6", "Accuracy": "64.0%",
+         "Balanced acc": "65.9%", "Macro F1": "0.656", "Trivial baseline": "25.8%"},
+        {"Framing": "Exploit class excluded", "Classes": "8", "Accuracy": "58.8%",
+         "Balanced acc": "58.8%", "Macro F1": "0.588", "Trivial baseline": "13.6%"},
     ],
     ["Framing", "Classes", "Accuracy", "Balanced acc", "Macro F1", "Trivial baseline"],
 ))
 
 st.warning(
     "**The binary framing is a trap, and it is reported here so nobody "
-    "repeats it.** At 86.3% accuracy it looks like the strongest result on "
+    "repeats it.** At 86.7% accuracy it looks like the strongest result on "
     "this page — but malware is 1,611 of 1,836 test samples, so a classifier "
     "that ignores its input and always answers \"malware\" scores 87.7%. The "
     "model is *worse than that constant*. Its honest figure is balanced "
-    "accuracy, 69.3%. Any binary malware-detection accuracy quoted without "
+    "accuracy, 67.0%. Any binary malware-detection accuracy quoted without "
     "its class balance is meaningless.",
     icon=":material/warning:",
 )
@@ -169,8 +177,8 @@ st.write(
     "malware *does* in memory — self-replicating (Virus, Worm), "
     "stealth-persistence (Rootkit, Trojan), remote-access (Backdoor), "
     "deception (Hoax), offensive tooling (HackTool, Exploit), with Benign "
-    "always kept separate — lifts macro F1 from 0.542 to 0.653 (+11.1 "
-    "points) and balanced accuracy from 53.6% to 65.7% (+12.1). The grouping "
+    "always kept separate — lifts macro F1 from 0.544 to 0.656 (+11.3 "
+    "points) and balanced accuracy from 53.7% to 65.9% (+12.2). The grouping "
     "is motivated by malware behaviour, not by reading the confusion matrix."
 )
 
@@ -184,19 +192,19 @@ st.write(
 )
 render(metrics_table(
     [
-        {"Coverage": "100% (no abstention)", "9-class": "57.8%", "Behavioural 6-class": "63.6%"},
-        {"Coverage": "80%", "9-class": "64.7%", "Behavioural 6-class": "69.8%"},
-        {"Coverage": "60%", "9-class": "73.6%", "Behavioural 6-class": "77.0%"},
-        {"Coverage": "50%", "9-class": "78.8%", "Behavioural 6-class": "81.1%"},
-        {"Coverage": "40%", "9-class": "83.9%", "Behavioural 6-class": "86.5%"},
+        {"Coverage": "100% (no abstention)", "9-class": "57.8%", "Behavioural 6-class": "63.7%"},
+        {"Coverage": "80%", "9-class": "65.0%", "Behavioural 6-class": "69.3%"},
+        {"Coverage": "60%", "9-class": "72.2%", "Behavioural 6-class": "77.2%"},
+        {"Coverage": "50%", "9-class": "76.5%", "Behavioural 6-class": "81.3%"},
+        {"Coverage": "40%", "9-class": "83.1%", "Behavioural 6-class": "84.9%"},
     ],
     ["Coverage", "9-class", "Behavioural 6-class"],
 ))
 st.write(
-    "Read honestly: **81.1% on half the samples**, with the other half "
+    "Read honestly: **81.3% on half the samples**, with the other half "
     "flagged for an analyst. That is a triage capability, not a higher "
     "score on the original task — the 9-class figure at full coverage "
-    "remains 58-59%, and every framing above is a redefinition of the "
+    "remains 58%, and every framing above is a redefinition of the "
     "question rather than a better answer to it."
 )
 
