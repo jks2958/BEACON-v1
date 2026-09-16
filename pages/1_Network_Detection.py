@@ -8,15 +8,14 @@ vs 99.1% per capture).
 import pandas as pd
 import streamlit as st
 
-from pipeline.controller import DashboardController, StreamUnavailable, risk_level
+from pipeline.application import analyze_upload, get_controller
+from pipeline.app_state import save_analysis
+from pipeline.controller import StreamUnavailable, risk_level
+from pipeline.interpretation import interpret_analysis
 from pipeline.ui import (current_theme_name, detections_table, kpi_strip, probability_bars,
-                         record_detection, render, sidebar_footer, verdict_card)
+                         interpretation_summary, page_header, record_detection, render,
+                         section_header, sidebar_footer, verdict_card)
 from pipeline.viz import headline, load_metrics, shap_contribution_chart
-
-
-@st.cache_resource
-def _load_controller(stream: str) -> DashboardController:
-    return DashboardController(stream)
 
 
 net_metrics, mem_metrics = load_metrics("network"), load_metrics("memory")
@@ -25,7 +24,7 @@ with st.sidebar:
     render(sidebar_footer(net_ok=bool(net_metrics), mem_ok=bool(mem_metrics)))
 
 try:
-    controller = _load_controller("network")
+    controller = get_controller("network")
 except StreamUnavailable:
     st.markdown("# Analyse network capture")
     st.warning(
@@ -40,10 +39,12 @@ except StreamUnavailable:
 sample_head = headline(net_metrics, "sample") if net_metrics and "sample_level" in net_metrics else None
 flow_head = headline(net_metrics, "flow") if net_metrics and "flow_level" in net_metrics else None
 
-st.markdown("# Analyse network capture")
-st.caption("Every flow in the capture is classified; the verdict combines them. "
-           "Identifier columns (IPs, ports, timestamps, flow IDs) are excluded so the "
-           "model learns behaviour rather than the capture environment.")
+render(page_header("Network detection",
+                   "Classify prepared network-flow telemetry and inspect capture-level evidence.",
+                   eyebrow="ANALYST MODE"))
+st.info("**Production classification:** prepared Network CSV only. Native PCAP/PCAPNG "
+        "remains diagnostic-only and cannot reach the model.", icon=":material/shield:")
+render(section_header("Input", "Upload prepared Network CSV telemetry"))
 
 uploaded = st.file_uploader("Network flow CSV", type="csv", label_visibility="collapsed")
 
@@ -56,17 +57,19 @@ if uploaded is None:
     st.stop()
 
 try:
-    df = controller.handle_upload(uploaded)
+    with st.spinner("Classifying flows and computing SHAP explanation…"):
+        output = analyze_upload("network", uploaded)
 except ValueError as exc:
     st.error(str(exc))
     st.stop()
 
-with st.spinner("Classifying flows and computing SHAP explanation…"):
-    result = controller.run_pipeline(df)
+df, result = output.validated_frame, output.result
+save_analysis(st.session_state, output)
 
 verdict = result["verdict"]
 confidence = result["confidence"]
 severity = risk_level(verdict, confidence)
+interpretation = interpret_analysis(result, "network")
 proba = result["aggregate_probabilities"].sort_values(ascending=False)
 runner_up = proba.index[1] if len(proba) > 1 else "—"
 margin = (proba.iloc[0] - proba.iloc[1]) * 100 if len(proba) > 1 else 0.0
@@ -78,6 +81,7 @@ record_detection(st.session_state, sample=uploaded.name, stream="network",
                  rows=result["n_rows"])
 
 left, right = st.columns([1, 1], gap="medium")
+render(section_header("Result summary"))
 with left:
     render(verdict_card(verdict, severity, confidence,
                         f"{uploaded.name} · {result['n_rows']:,} flows · network_classifier.joblib"))
@@ -96,6 +100,8 @@ with right:
         kpis.append({"label": "Per-flow accuracy", "value": f"{flow_head['accuracy']:.1%}",
                      "sub": f"n={flow_head['n']:,} flows"})
     render(kpi_strip(kpis))
+
+render(interpretation_summary(interpretation))
 
 st.markdown("")
 summary_tab, explain_tab, raw_tab = st.tabs(["Summary", "Explanation", "Raw features"])

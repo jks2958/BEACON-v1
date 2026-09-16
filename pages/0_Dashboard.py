@@ -12,19 +12,22 @@ exactly like the pinned Network/Memory Detection pages underneath.
 import pandas as pd
 import streamlit as st
 
-from pipeline.controller import DashboardController, StreamUnavailable, risk_level
-from pipeline.ui import (confidence_ring, data_preview_table, detections_table, kpi_strip,
-                         probability_bars, record_detection, render, severity_chip,
-                         severity_colors, shap_table, sidebar_footer, tokens, workflow_stepper)
+from pipeline.application import analyze_upload, get_controller
+from pipeline.app_state import save_analysis
+from pipeline.controller import StreamUnavailable, risk_level
+from pipeline.interpretation import interpret_analysis
+from pipeline.ui import (confidence_ring, data_preview_table, detections_table, empty_state,
+                         interpretation_summary, kpi_strip, page_header, probability_bars,
+                         record_detection, render, severity_chip, severity_colors, shap_table,
+                         sidebar_footer, tokens, workflow_stepper)
 from pipeline.viz import headline, load_metrics
 
 net_metrics, mem_metrics = load_metrics("network"), load_metrics("memory")
 
 
-@st.cache_resource
-def _load_controller(stream: str) -> DashboardController | None:
+def _load_controller(stream: str):
     try:
-        return DashboardController(stream)
+        return get_controller(stream)
     except StreamUnavailable:
         return None
 
@@ -33,21 +36,27 @@ net_head = headline(net_metrics, "sample") if net_metrics and "sample_level" in 
 mem_head = headline(mem_metrics) if mem_metrics else None
 models_ready = sum(1 for h in (net_head, mem_head) if h)
 
-st.markdown("# Analyse. Explain. Decide.")
-st.caption("Upload network-flow or memory-forensic telemetry. BEACON classifies the sample "
-           "into one of nine malware categories or benign, and shows exactly which "
-           "behaviours drove the call.")
+render(page_header(
+    "Investigation dashboard",
+    "Analyze Network or Memory telemetry, review model evidence, and track this session's activity.",
+    eyebrow="ANALYST MODE",
+))
+
+history = st.session_state.get("detections", [])
+network_runs = sum(row.get("stream") == "network" for row in history)
+memory_runs = sum(row.get("stream") == "memory" for row in history)
+latest = history[-1] if history else None
 
 render(kpi_strip([
-    {"icon": "grid_view", "label": "Malware categories", "value": "9",
-     "sub": "Known malware families"},
-    {"icon": "swap_horiz", "label": "Behavioral streams", "value": "2",
-     "sub": "Memory + Network"},
-    {"icon": "layers", "label": "Model stack", "value": "XGBoost + SHAP",
-     "sub": "Tree-based ML with explainability"},
-    {"icon": "verified", "label": "Models ready", "value": f"{models_ready}/2",
-     "sub": "Ready for inference" if models_ready == 2 else "Awaiting training data",
-     "ok": models_ready == 2},
+    {"icon": "hub", "label": "Network analyses", "value": str(network_runs),
+     "sub": "this session"},
+    {"icon": "memory", "label": "Memory analyses", "value": str(memory_runs),
+     "sub": "this session"},
+    {"icon": "fact_check", "label": "Latest classification",
+     "value": latest["verdict"] if latest else "—",
+     "sub": f'{latest["confidence"]:.1%} confidence' if latest else "No result yet"},
+    {"icon": "history", "label": "Recent activity", "value": str(len(history)),
+     "sub": "recorded analyses"},
 ]))
 
 st.markdown("")
@@ -80,9 +89,10 @@ error = None
 df = None
 if controller is not None and uploaded is not None:
     try:
-        df = controller.handle_upload(uploaded)
         with st.spinner("Classifying and computing SHAP explanation…"):
-            result = controller.run_pipeline(df)
+            output = analyze_upload(stream, uploaded)
+        df, result = output.validated_frame, output.result
+        save_analysis(st.session_state, output)
     except ValueError as exc:
         error = str(exc)
 
@@ -102,6 +112,7 @@ with right:
         verdict = result["verdict"]
         confidence = result["confidence"]
         severity = risk_level(verdict, confidence)
+        interpretation = interpret_analysis(result, stream)
         unit = "flows" if stream == "network" else "row(s)"
         record_detection(st.session_state, sample=uploaded.name, stream=stream,
                          verdict=verdict, confidence=confidence, severity=severity,
@@ -121,6 +132,7 @@ with right:
   </div>
 </div>
 """)
+        render(interpretation_summary(interpretation))
 
 st.markdown("")
 c1, c2 = st.columns([1, 1.1], gap="medium")
@@ -174,8 +186,13 @@ if result is not None:
         file_name=f"beacon_{stream}_verdict.csv", mime="text/csv",
     )
 
-render('<div class="bx-label" style="margin-top:20px">Detections this session</div>')
-render(detections_table(st.session_state.get("detections", [])))
+render('<div class="bx-label" style="margin-top:20px">Recent analyses</div>')
+if history:
+    render(detections_table(history))
+else:
+    render(empty_state("No analyses have been run in this session",
+                       "Choose an evidence stream and upload prepared telemetry to begin.",
+                       "history"))
 
 with st.sidebar:
     render(sidebar_footer(net_ok=bool(net_metrics), mem_ok=bool(mem_metrics)))

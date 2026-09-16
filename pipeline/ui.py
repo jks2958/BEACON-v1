@@ -91,6 +91,28 @@ def render(markup: str) -> None:
     st.html(markup)
 
 
+def page_header(title: str, subtitle: str, eyebrow: str | None = None) -> str:
+    """Consistent, accessible page heading for both experiences."""
+    eyebrow_html = f'<div class="bx-eyebrow">{_esc(eyebrow)}</div>' if eyebrow else ""
+    return (f'<header class="bx-pagehead">{eyebrow_html}<h1>{_esc(title)}</h1>'
+            f'<p>{_esc(subtitle)}</p></header>')
+
+
+def section_header(title: str, subtitle: str | None = None) -> str:
+    subtitle_html = f'<div class="sub">{_esc(subtitle)}</div>' if subtitle else ""
+    return f'<div class="bx-section"><h2>{_esc(title)}</h2>{subtitle_html}</div>'
+
+
+def empty_state(title: str, message: str, icon_name: str = "inbox") -> str:
+    """A reusable non-error state whose meaning is not conveyed by colour."""
+    return (f'<div class="bx-empty" role="status">{icon(icon_name, 24)}'
+            f'<strong>{_esc(title)}</strong><span>{_esc(message)}</span></div>')
+
+
+def mode_badge(mode: str) -> str:
+    return f'<div class="bx-mode" aria-label="Current mode: {_esc(mode)}">{_esc(mode)} mode</div>'
+
+
 def current_theme_name() -> str:
     """'dark' or 'light' -- the single source of truth every page and
     chart call reads, so the toggle and every themed surface agree."""
@@ -206,6 +228,31 @@ def inject_theme() -> str:
      there), and without !important it silently fell back to Streamlit's
      own base-theme text colour instead of the active toggle's palette. */
   .sub {{ font-size: 12px; color: {t['muted']} !important; margin: 0 0 14px; }}
+  .bx-pagehead {{ max-width:820px; margin:4px 0 28px; }}
+  .bx-pagehead h1 {{ font-size:2rem !important; margin:.15rem 0 .45rem !important; }}
+  .bx-pagehead p {{ font-size:1rem; line-height:1.6; margin:0; max-width:720px; }}
+  .bx-eyebrow, .bx-label {{ color:{t['accent_ink']}; font-size:.72rem; font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase; }}
+  .bx-section {{ margin:26px 0 10px; }}
+  .bx-section h2 {{ margin:0 0 5px !important; font-size:1.05rem !important; }}
+  .bx-empty {{ display:flex; flex-direction:column; align-items:flex-start; gap:7px;
+    padding:24px; border:1px dashed {t['line']}; border-radius:12px; background:{t['panel2']}; }}
+  .bx-empty strong {{ color:{t['ink']}; font-size:.95rem; }}
+  .bx-empty span {{ color:{t['ink2']}; font-size:.86rem; line-height:1.5; }}
+  .bx-mode {{ display:inline-flex; margin:0 0 10px; padding:4px 9px; border-radius:999px;
+    background:{t['accent_soft']}; color:{t['accent_ink']}; font-size:.7rem; font-weight:700;
+    letter-spacing:.06em; text-transform:uppercase; }}
+  .bx-step {{ min-height:105px; padding:17px; border:1px solid {t['line']};
+    border-radius:10px; background:{t['panel']}; }}
+  .bx-step .num {{ color:{t['accent_ink']}; font:600 .72rem "IBM Plex Mono"; }}
+  .bx-step strong {{ display:block; color:{t['ink']}; margin:8px 0 4px; }}
+  .bx-step span {{ color:{t['ink2']}; font-size:.82rem; line-height:1.45; }}
+  @media (max-width: 900px) {{
+    .block-container {{ padding-left:1rem; padding-right:1rem; }}
+    .bx-pagehead h1 {{ font-size:1.65rem !important; }}
+    [data-testid="stHorizontalBlock"] {{ flex-wrap:wrap; }}
+    [data-testid="column"] {{ min-width:260px !important; flex:1 1 260px !important; }}
+  }}
 
   /* ---- sidebar: native page nav + status footer ---- */
   [data-testid="stSidebar"] {{ background: {t['panel']}; border-right: 1px solid {t['line']}; }}
@@ -710,6 +757,19 @@ def engine_status(name: str, detail: str, ok: bool = True) -> str:
     colour = severity_colors()["Low"] if ok else tokens()["muted"]
     return (f'<div class="bx-status"><span class="dot" style="background:{colour}"></span>'
             f'<div><div class="nm">{_esc(name)}</div><div class="mt">{_esc(detail)}</div></div></div>')
+
+
+def interpretation_summary(interpretation) -> str:
+    """Compact analyst view of an already-computed interpretation."""
+    evidence = interpretation.evidence_items[0] if interpretation.evidence_items else None
+    strongest = evidence.human_explanation if evidence else "No SHAP evidence was returned."
+    status = interpretation.review_status.value.replace("_", " ").title()
+    return (
+        '<div class="bx-note"><strong>Interpretation summary.</strong> '
+        f'{_esc(interpretation.malware_description)}<br>'
+        f'<strong>Status:</strong> {_esc(status)}. '
+        f'<strong>Strongest evidence:</strong> {_esc(strongest)}</div>'
+    )
 
 
 def sidebar_footer(net_ok: bool, mem_ok: bool) -> str:
