@@ -10,7 +10,9 @@ page to see a genuine SHAP explanation.
 import pandas as pd
 import streamlit as st
 
-from pipeline.ui import current_theme_name, icon, render, sidebar_footer
+from pipeline.app_state import latest_analysis
+from pipeline.ui import (current_theme_name, empty_state, icon, page_header, render,
+                         section_header, sidebar_footer)
 from pipeline.viz import load_metrics, shap_contribution_chart
 
 net_metrics, mem_metrics = load_metrics("network"), load_metrics("memory")
@@ -18,8 +20,35 @@ net_metrics, mem_metrics = load_metrics("network"), load_metrics("memory")
 with st.sidebar:
     render(sidebar_footer(net_ok=bool(net_metrics), mem_ok=bool(mem_metrics)))
 
-st.markdown("# Explainability")
-st.caption("Every verdict ships with the reasons behind it — not just a category and a number.")
+render(page_header("Explainability",
+                   "Understand which measured features pushed a prediction toward or away from its result.",
+                   eyebrow="ANALYST MODE"))
+
+render(section_header("What SHAP means"))
+st.write("SHAP assigns each measured feature a contribution for a specific prediction. "
+         "Positive contributions push toward the reported class; negative contributions "
+         "push away. It explains the model's reasoning, not causation or proof of compromise.")
+
+current = latest_analysis(st.session_state)
+render(section_header("Current prediction", "Evidence from the latest completed analysis"))
+if current is None:
+    render(empty_state("Run an analysis first to view feature-level evidence",
+                       "Use Network Detection or Memory Detection, then return here.", "insights"))
+else:
+    result = current.result
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Predicted category", result["verdict"])
+    c2.metric("Model confidence", f'{result["confidence"]:.1%}')
+    c3.metric("Evidence stream", current.stream.title())
+    toward = result["top_features"][result["top_features"]["shap_value"] > 0]
+    away = result["top_features"][result["top_features"]["shap_value"] < 0]
+    left_live, right_live = st.columns(2)
+    with left_live:
+        st.markdown("### Features pushing toward the result")
+        st.dataframe(toward, use_container_width=True, hide_index=True)
+    with right_live:
+        st.markdown("### Features pushing away from the result")
+        st.dataframe(away, use_container_width=True, hide_index=True)
 
 left, right = st.columns([1, 1], gap="large")
 
@@ -66,8 +95,7 @@ with right:
                "`models/network_preprocessing_artifacts.joblib`), shown here with "
                "illustrative numbers to explain how to read the chart.")
 
-st.markdown("---")
-st.markdown("## Where this shows up")
+render(section_header("Where this shows up"))
 c1, c2 = st.columns(2, gap="medium")
 with c1:
     render(f'<div class="bx-card"><h2>{icon("hub", 18)} Network stream</h2>'

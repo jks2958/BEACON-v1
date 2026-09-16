@@ -1,0 +1,948 @@
+{
+  "contract": "BEACON Memory model input",
+  "feature_count": 94,
+  "artifact_source": "models/memory_preprocessing_artifacts.joblib:feature_cols",
+  "empirically_reproduced": false,
+  "features": [
+    {
+      "position": 0,
+      "name": "info.Is64",
+      "numeric_type": "number",
+      "plugin_family": "info",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 1,
+      "name": "info.npro",
+      "numeric_type": "number",
+      "plugin_family": "info",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 2,
+      "name": "info.IsPAE",
+      "numeric_type": "number",
+      "plugin_family": "info",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 3,
+      "name": "pslist.nproc",
+      "numeric_type": "number",
+      "plugin_family": "pslist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 4,
+      "name": "pslist.nppid",
+      "numeric_type": "number",
+      "plugin_family": "pslist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 5,
+      "name": "pslist.avg_threads",
+      "numeric_type": "number",
+      "plugin_family": "pslist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 6,
+      "name": "pslist.nprocs64bit",
+      "numeric_type": "number",
+      "plugin_family": "pslist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 7,
+      "name": "pslist.outfile",
+      "numeric_type": "number",
+      "plugin_family": "pslist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 8,
+      "name": "dlllist.ndlls",
+      "numeric_type": "number",
+      "plugin_family": "dlllist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 9,
+      "name": "dlllist.nproc_dll",
+      "numeric_type": "number",
+      "plugin_family": "dlllist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 10,
+      "name": "dlllist.avg_dllPerProc",
+      "numeric_type": "number",
+      "plugin_family": "dlllist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 11,
+      "name": "dlllist.avgSize",
+      "numeric_type": "number",
+      "plugin_family": "dlllist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 12,
+      "name": "dlllist.outfile",
+      "numeric_type": "number",
+      "plugin_family": "dlllist",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 13,
+      "name": "handles.nHandles",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 14,
+      "name": "handles.distinctHandles",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 15,
+      "name": "handles.nproc",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 16,
+      "name": "handles.nAccess",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 17,
+      "name": "handles.avgHandles_per_proc",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 18,
+      "name": "handles.nTypeUnknown",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 19,
+      "name": "handles.nTypePort",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 20,
+      "name": "handles.nTypeProcess",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 21,
+      "name": "handles.nTypeThread",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 22,
+      "name": "handles.nTypeKey",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 23,
+      "name": "handles.nTypeEvent",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 24,
+      "name": "handles.nTypeFile",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 25,
+      "name": "handles.nTypeDirectory",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 26,
+      "name": "handles.nTypeSection",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 27,
+      "name": "handles.nTypeDesktop",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 28,
+      "name": "handles.nTypeToken",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 29,
+      "name": "handles.nTypeMutant",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 30,
+      "name": "handles.nTypeKeyedEvent",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 31,
+      "name": "handles.nTypeSymbolicLink",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 32,
+      "name": "handles.nTypeSemaphore",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 33,
+      "name": "handles.nTypeWindowStation",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 34,
+      "name": "handles.nTypeTimer",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 35,
+      "name": "handles.nTypeIoCompletion",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 36,
+      "name": "handles.nTypeWmiGuid",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 37,
+      "name": "handles.nTypeWaitablePort",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 38,
+      "name": "handles.nTypeJob",
+      "numeric_type": "number",
+      "plugin_family": "handles",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 39,
+      "name": "ldrmodules.total",
+      "numeric_type": "number",
+      "plugin_family": "ldrmodules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 40,
+      "name": "ldrmodules.not_in_load",
+      "numeric_type": "number",
+      "plugin_family": "ldrmodules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 41,
+      "name": "ldrmodules.not_in_init",
+      "numeric_type": "number",
+      "plugin_family": "ldrmodules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 42,
+      "name": "ldrmodules.not_in_mem",
+      "numeric_type": "number",
+      "plugin_family": "ldrmodules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 43,
+      "name": "ldrmodules.nporc",
+      "numeric_type": "number",
+      "plugin_family": "ldrmodules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 44,
+      "name": "ldrmodules.not_in_load_avg",
+      "numeric_type": "number",
+      "plugin_family": "ldrmodules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 45,
+      "name": "ldrmodules.not_in_init_avg",
+      "numeric_type": "number",
+      "plugin_family": "ldrmodules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 46,
+      "name": "ldrmodules.not_in_mem_avg",
+      "numeric_type": "number",
+      "plugin_family": "ldrmodules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 47,
+      "name": "malfind.ninjections",
+      "numeric_type": "number",
+      "plugin_family": "malfind",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 48,
+      "name": "malfind.commitCharge",
+      "numeric_type": "number",
+      "plugin_family": "malfind",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 49,
+      "name": "malfind.protection",
+      "numeric_type": "number",
+      "plugin_family": "malfind",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 50,
+      "name": "malfind.uniqueInjections",
+      "numeric_type": "number",
+      "plugin_family": "malfind",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 51,
+      "name": "malfind.avgInjec_per_proc",
+      "numeric_type": "number",
+      "plugin_family": "malfind",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 52,
+      "name": "malfind.tagsVad",
+      "numeric_type": "number",
+      "plugin_family": "malfind",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 53,
+      "name": "malfind.tagsVads",
+      "numeric_type": "number",
+      "plugin_family": "malfind",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 54,
+      "name": "malfind.aveVPN_diff",
+      "numeric_type": "number",
+      "plugin_family": "malfind",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 55,
+      "name": "modules.nmodules",
+      "numeric_type": "number",
+      "plugin_family": "modules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 56,
+      "name": "modules.avgSize",
+      "numeric_type": "number",
+      "plugin_family": "modules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 57,
+      "name": "modules.FO_enabled",
+      "numeric_type": "number",
+      "plugin_family": "modules",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 58,
+      "name": "callbacks.ncallbacks",
+      "numeric_type": "number",
+      "plugin_family": "callbacks",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 59,
+      "name": "callbacks.nNoDetail",
+      "numeric_type": "number",
+      "plugin_family": "callbacks",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 60,
+      "name": "callbacks.nBugCheck",
+      "numeric_type": "number",
+      "plugin_family": "callbacks",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 61,
+      "name": "callbacks.nBugCheckReason",
+      "numeric_type": "number",
+      "plugin_family": "callbacks",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 62,
+      "name": "callbacks.nCreateProc",
+      "numeric_type": "number",
+      "plugin_family": "callbacks",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 63,
+      "name": "callbacks.nCreateThread",
+      "numeric_type": "number",
+      "plugin_family": "callbacks",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 64,
+      "name": "callbacks.nLoadImg",
+      "numeric_type": "number",
+      "plugin_family": "callbacks",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 65,
+      "name": "callbacks.nRegisterCB",
+      "numeric_type": "number",
+      "plugin_family": "callbacks",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 66,
+      "name": "callback.nUnknownType",
+      "numeric_type": "number",
+      "plugin_family": "callback",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 67,
+      "name": "modscan.nMod",
+      "numeric_type": "number",
+      "plugin_family": "modscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 68,
+      "name": "modscan.nUniqueExt",
+      "numeric_type": "number",
+      "plugin_family": "modscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 69,
+      "name": "modscan.nDLL",
+      "numeric_type": "number",
+      "plugin_family": "modscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 70,
+      "name": "modscan.nSYS",
+      "numeric_type": "number",
+      "plugin_family": "modscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 71,
+      "name": "modscan.nEXE",
+      "numeric_type": "number",
+      "plugin_family": "modscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 72,
+      "name": "modscan.nOthers",
+      "numeric_type": "number",
+      "plugin_family": "modscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 73,
+      "name": "modscan.AvgSize",
+      "numeric_type": "number",
+      "plugin_family": "modscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 74,
+      "name": "modscan.MeanChildExist",
+      "numeric_type": "number",
+      "plugin_family": "modscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 75,
+      "name": "modscan.FO_Enabled",
+      "numeric_type": "number",
+      "plugin_family": "modscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 76,
+      "name": "mutantscan.nMutantObjects",
+      "numeric_type": "number",
+      "plugin_family": "mutantscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 77,
+      "name": "mutantscan.nNamedMutant",
+      "numeric_type": "number",
+      "plugin_family": "mutantscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 78,
+      "name": "netscan.nConn",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 79,
+      "name": "netscan.nDistinctForeignAdd",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 80,
+      "name": "netscan.nDistinctForeignPort",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 81,
+      "name": "netscan.nDistinctLocalAddr",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 82,
+      "name": "netscan.nDistinctLocalPort",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 83,
+      "name": "netscan.nOwners",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 84,
+      "name": "netscan.nDistinctProc",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 85,
+      "name": "netscan.nListening",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 86,
+      "name": "netscan.Proto_TCPv4",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 87,
+      "name": "netscan.Proto_TCPv6",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 88,
+      "name": "netscan.Proto_UDPv4",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 89,
+      "name": "netscan.Proto_UDPv6",
+      "numeric_type": "number",
+      "plugin_family": "netscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 90,
+      "name": "symlinkscan.nLinks",
+      "numeric_type": "number",
+      "plugin_family": "symlinkscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 91,
+      "name": "symlinkscan.nFrom",
+      "numeric_type": "number",
+      "plugin_family": "symlinkscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 92,
+      "name": "symlinkscan.nTo",
+      "numeric_type": "number",
+      "plugin_family": "symlinkscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    },
+    {
+      "position": 93,
+      "name": "symlinkscan.Avg_Children",
+      "numeric_type": "number",
+      "plugin_family": "symlinkscan",
+      "plugin_family_status": "inferred_from_feature_prefix",
+      "metric_semantics": "unknown",
+      "derivation": "not_recovered",
+      "reproduction_status": "unverified"
+    }
+  ]
+}

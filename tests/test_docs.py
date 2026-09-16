@@ -47,8 +47,9 @@ def test_memory_accuracy_matches_the_metrics_file(readme):
 def test_both_units_are_named_wherever_the_capture_number_appears(readme):
     # The per-capture figure alone overstates what the model does, so it
     # must never appear without its unit and its per-flow counterpart.
-    assert "per capture" in readme
-    assert "per flow" in readme
+    normalized = " ".join(readme.replace("**", "").split())
+    assert "per capture" in normalized
+    assert "per flow" in normalized
 
 
 def test_readme_does_not_claim_an_untrained_model_that_exists(readme):
@@ -77,3 +78,33 @@ def test_test_count_claim_is_not_wildly_stale(readme):
     actual = int(m.group(1))
     for c in claimed:
         assert abs(c - actual) <= 10, f"README claims {c} tests; suite collects {actual}"
+
+
+def test_dual_mode_scope_is_documented_without_claiming_future_inputs(readme):
+    normalized = " ".join(readme.split())
+    assert "General Mode" in readme
+    assert "Analyst Mode" in readme
+    assert "Current input support remains prepared CSV telemetry only" in normalized
+    assert "Diagnostic formats do not produce malware verdicts" in normalized.replace("**", "")
+    assert "Raw memory" in normalized and "not supported" in normalized
+
+
+def test_unified_ingestion_is_documented_as_csv_only(readme):
+    normalized = " ".join(readme.split())
+    assert "Upload → Evidence ingestion → ParsedEvidence → Application service" in normalized
+    assert "Current input support remains prepared CSV telemetry only" in normalized
+    assert "Raw memory" in normalized and "not supported" in normalized
+
+
+def test_pcap_diagnostics_are_not_claimed_as_production_inference(readme):
+    normalized = " ".join(readme.replace("**", "").split())
+    assert "does not enable native-capture model inference" in normalized
+    assert "unproven 342-feature Network contract" in normalized
+    assert "Fail closed: no inference" in normalized
+
+
+def test_public_interpretation_is_documented_as_deterministic_and_non_scientific(readme):
+    normalized = " ".join(readme.split())
+    assert "No external generative AI is used" in normalized
+    assert "Public explanations do not alter prediction" in normalized
+    assert "no arbitrary abstention threshold is activated" in normalized

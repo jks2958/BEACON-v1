@@ -105,6 +105,53 @@ the data layer, with no layer depending upward.
 | Model / Intelligence | `NetworkClassifier`, `MemoryClassifier` | Learned mapping from features to one of nine categories |
 | Data | Raw CSV captures (`data/raw/`, not distributed); `ArtifactStore` over `models/*.joblib` | Persistent storage of inputs, models and preprocessing artifacts |
 
+**Unified evidence ingestion (Phase 2).** Streamlit pages no longer parse or
+route uploaded files independently. They pass the upload plus the user's
+explicit Network/Memory selection to a framework-independent ingestion layer:
+
+```text
+Upload -> EvidenceIngestionService -> ParsedEvidence -> application service
+       -> DashboardController -> preprocessing -> model -> SHAP
+```
+
+`ParsedEvidence` contains evidence metadata, original bytes, and the faithfully
+parsed DataFrame, but no controller, classifier, SHAP object, session state, or
+prediction. The ingestion layer handles only format/readability errors. The
+existing `DashboardController` remains the sole authority for feature
+derivation, schema validation, numeric coercion, fitted preprocessing,
+prediction aggregation, and explanation.
+
+Only prepared Network and Memory CSV telemetry is supported in Phase 2. A
+future `PCAPParser -> ParsedEvidence -> Network pipeline` and a future raw-memory
+extractor are extension examples, not implemented functionality.
+
+**Phase 3 compatibility gate.** A dependency-free parser now reads classic
+PCAP and PCAPNG captures into conservative bidirectional-flow diagnostics. The
+ordered 342-feature model contract is recorded in
+`pipeline/network_feature_contract.json`; however, no paired raw capture and
+prepared CSV or original extractor is available to establish exact semantics.
+Only 20 diagnostic fields are emitted and none of the 342 has an empirical
+reproduction result. Native-capture inference therefore fails closed before
+`DashboardController`; CSV inference remains the only production Network path.
+
+**Phase 4 interpretation layer.** Completed scientific results pass to a
+framework-independent deterministic translator after inference. It maps the
+existing category to neutral educational wording, preserves the exact numeric
+confidence, groups actual SHAP features into conservative evidence families,
+and supplies non-destructive precautionary guidance and stream-specific
+limitations. It neither calls a generative model nor recalculates model output.
+
+```text
+Existing result {category, confidence, probabilities, SHAP}
+    -> UserFacingInterpretation
+    -> General explanation / compact Analyst summary
+```
+
+The existing coverage experiment does not retain the underlying validation
+confidence cutoffs, so automatic `Needs Review` referral is deliberately not
+activated. The state is represented in the interpretation contract for later
+validated activation; Phase 4 does not invent a threshold.
+
 Two additions since the original draft: `pipeline/ui.py` and `pipeline/viz.py` were
 extracted from the pages so that presentation concerns (theme tokens, chart palettes,
 component markup) do not live inside page scripts.
@@ -417,3 +464,14 @@ preprocessing fit/apply split, the derivation contract, upload validation, verdi
 aggregation, risk levels, resampling's synthetic flag, and the consistency of the
 metrics files with the shipped models. They require no raw dataset and run in about
 13 seconds.
+
+### Phase 6: Memory evidence compatibility boundary
+
+The committed Memory preprocessing artifact defines an ordered 94-feature
+contract. Prepared Memory CSV remains the only production Memory input.
+Structured Volatility JSON may be parsed into a diagnostic frame and compared
+against that contract, but the adapter performs no filling, renaming,
+derivation, or inference. Because neither the original extractor nor a paired
+Volatility/prepared-CSV reference exists, matching names do not establish
+semantic equivalence and the application fails closed before the Memory
+controller. Raw memory execution is not implemented.

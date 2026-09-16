@@ -5,7 +5,7 @@ so the page cannot drift from what was actually measured.
 """
 import streamlit as st
 
-from pipeline.ui import metrics_table, render, sidebar_footer
+from pipeline.ui import metrics_table, page_header, render, section_header, sidebar_footer
 from pipeline.viz import headline, load_metrics
 
 net, mem = load_metrics("network"), load_metrics("memory")
@@ -13,10 +13,11 @@ net, mem = load_metrics("network"), load_metrics("memory")
 with st.sidebar:
     render(sidebar_footer(net_ok=bool(net), mem_ok=bool(mem)))
 
-st.markdown("# Methodology")
-st.caption("Model card, measured results, and the limitations reported alongside them.")
+render(page_header("Methodology",
+                   "Model card, measured results, and limitations reported with their units.",
+                   eyebrow="ANALYST MODE"))
 
-st.markdown("## The problem")
+render(section_header("Dataset and problem"))
 st.write(
     "Malware classifiers are typically accurate but opaque, and most are trained "
     "on a single behavioural source — usually network traffic — missing whatever "
@@ -25,7 +26,7 @@ st.write(
     "over both evidence types."
 )
 
-st.markdown("## The approach")
+render(section_header("Network and Memory pipelines"))
 st.write(
     "Two structurally identical pipelines share one preprocessing implementation "
     "(`pipeline/common.py`), so training and inference cannot drift apart. They "
@@ -35,7 +36,7 @@ st.write(
     "XGBoost multiclass classifier explained via SHAP `TreeExplainer`."
 )
 
-st.markdown("## Measured results")
+render(section_header("Measured results"))
 
 rows = []
 for stream_name, metrics, unit, label in [
@@ -69,7 +70,7 @@ st.info(
     icon=":material/straighten:",
 )
 
-st.markdown("## Honest limitations")
+render(section_header("Known limitations"))
 st.markdown(
     """
 - **Memory stream is the weaker one.** Backdoor, Hoax and HackTool separate
@@ -122,7 +123,7 @@ st.markdown(
     """
 )
 
-st.markdown("## Reframing the Memory task")
+render(section_header("Memory-stream research"))
 st.write(
     "The 9-class ceiling above raises a fair question: would a different "
     "taxonomy suit these features better? The 94 Memory features are all "
@@ -200,6 +201,10 @@ st.write(
     "question rather than a better answer to it."
 )
 
-st.markdown("## Built with")
+render(section_header("PCAP compatibility status"))
+st.info("PCAP and PCAPNG parsing is diagnostic-only. Exact reproduction of the trained "
+        "342-feature Network contract is not proven, so captures remain blocked from inference.")
+
+render(section_header("Implementation stack"))
 st.write(", ".join(["Python", "XGBoost", "Optuna", "SHAP", "scikit-learn",
                     "imbalanced-learn", "pandas", "Altair", "Streamlit"]))
